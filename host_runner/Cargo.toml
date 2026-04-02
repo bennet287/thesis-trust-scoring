@@ -1,0 +1,8 @@
+[package]
+name = "host_runner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wasmtime = "38"
+anyhow = "1"

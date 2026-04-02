@@ -1,0 +1,8 @@
+{
+  "model": "numeric_decision_tree",
+  "accuracy": 0.8919077682915005,
+  "precision": 0.9879552038574456,
+  "recall": 0.8515681953394055,
+  "f1_score": 0.9147056573375276,
+  "n_numeric_features": 39
+}
