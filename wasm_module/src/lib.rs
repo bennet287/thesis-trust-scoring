@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::sync::OnceLock;
 
 #[derive(Debug, Deserialize)]
 struct TreeExport {
@@ -22,12 +23,13 @@ struct TreeData {
     classes: Vec<i32>,
 }
 
-#[derive(Debug, Deserialize)]
-struct SampleInput {
-    feature_names: Vec<String>,
-    values: Vec<f64>,
-    expected_attack_probability: f64,
-    expected_trust_score: f64,
+static MODEL: OnceLock<TreeExport> = OnceLock::new();
+
+fn get_model() -> &'static TreeExport {
+    MODEL.get_or_init(|| {
+        let model_str = include_str!("../../results/models/numeric_dt_export.json");
+        serde_json::from_str(model_str).expect("Could not parse embedded model JSON")
+    })
 }
 
 fn trust_to_action_code(trust_score: f64) -> i32 {
@@ -40,16 +42,6 @@ fn trust_to_action_code(trust_score: f64) -> i32 {
     } else {
         3 // BLOCK
     }
-}
-
-fn load_model() -> TreeExport {
-    let model_str = include_str!("../../results/models/numeric_dt_export.json");
-    serde_json::from_str(model_str).expect("Could not parse embedded model JSON")
-}
-
-fn load_sample() -> SampleInput {
-    let sample_str = include_str!("../../results/models/numeric_dt_sample_input.json");
-    serde_json::from_str(sample_str).expect("Could not parse embedded sample JSON")
 }
 
 fn impute_and_scale(values: &[f64], model: &TreeExport) -> Vec<f64> {
@@ -89,7 +81,7 @@ fn predict_proba(values: &[f64], model: &TreeExport) -> f64 {
             if total <= 0.0 {
                 return 0.0;
             }
-            return counts[1] / total; // class 1 = attack
+            return counts[1] / total;
         }
 
         let feature_idx = tree.feature[node] as usize;
@@ -103,34 +95,42 @@ fn predict_proba(values: &[f64], model: &TreeExport) -> f64 {
     }
 }
 
+// Simple shared input buffer inside Wasm module.
+// Host writes 39 f64 values here.
+static mut INPUT_BUFFER: [f64; 39] = [0.0; 39];
+
 #[unsafe(no_mangle)]
-pub extern "C" fn predict_demo_attack_probability_x1000000() -> i32 {
-    let model = load_model();
-    let sample = load_sample();
-    let attack_probability = predict_proba(&sample.values, &model);
+pub extern "C" fn get_input_buffer_ptr() -> *mut f64 {
+    std::ptr::addr_of_mut!(INPUT_BUFFER) as *mut f64
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn get_expected_feature_count() -> i32 {
+    get_model().feature_names.len() as i32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn predict_attack_probability_x1000000() -> i32 {
+    let model = get_model();
+    let values: &[f64] = unsafe { &INPUT_BUFFER };
+    let attack_probability = predict_proba(values, model);
     (attack_probability * 1_000_000.0).round() as i32
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn predict_demo_trust_score_x1000000() -> i32 {
-    let model = load_model();
-    let sample = load_sample();
-    let attack_probability = predict_proba(&sample.values, &model);
+pub extern "C" fn predict_trust_score_x1000000() -> i32 {
+    let model = get_model();
+    let values: &[f64] = unsafe { &INPUT_BUFFER };
+    let attack_probability = predict_proba(values, model);
     let trust_score = 1.0 - attack_probability;
     (trust_score * 1_000_000.0).round() as i32
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn predict_demo_action_code() -> i32 {
-    let model = load_model();
-    let sample = load_sample();
-    let attack_probability = predict_proba(&sample.values, &model);
+pub extern "C" fn predict_action_code() -> i32 {
+    let model = get_model();
+    let values: &[f64] = unsafe { &INPUT_BUFFER };
+    let attack_probability = predict_proba(values, model);
     let trust_score = 1.0 - attack_probability;
     trust_to_action_code(trust_score)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn expected_attack_probability_x1000000() -> i32 {
-    let sample = load_sample();
-    (sample.expected_attack_probability * 1_000_000.0).round() as i32
 }
