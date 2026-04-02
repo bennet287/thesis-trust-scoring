@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use std::fs;
+use std::time::Instant;
 use wasmtime::{Engine, Instance, Module, Store};
 
 fn action_name(code: i32) -> &'static str {
@@ -18,6 +19,26 @@ struct SampleInput {
     values: Vec<f64>,
     expected_attack_probability: f64,
     expected_trust_score: f64,
+}
+
+fn mean(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
+fn median(values: &mut [f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let mid = values.len() / 2;
+    if values.len() % 2 == 0 {
+        (values[mid - 1] + values[mid]) / 2.0
+    } else {
+        values[mid]
+    }
 }
 
 fn main() -> Result<()> {
@@ -56,13 +77,19 @@ fn main() -> Result<()> {
 
     let ptr = get_ptr.call(&mut store, ())? as usize;
 
-    // write f64 values into Wasm memory
+    // write f64 values into Wasm memory once
     for (i, value) in sample.values.iter().enumerate() {
         let bytes = value.to_le_bytes();
         let offset = ptr + i * 8;
         memory.write(&mut store, offset, &bytes)?;
     }
 
+    // warm-up
+    let _ = attack_fn.call(&mut store, ())?;
+    let _ = trust_fn.call(&mut store, ())?;
+    let _ = action_fn.call(&mut store, ())?;
+
+    // one correctness run
     let attack_prob_raw = attack_fn.call(&mut store, ())?;
     let trust_score_raw = trust_fn.call(&mut store, ())?;
     let action_code = action_fn.call(&mut store, ())?;
@@ -85,6 +112,43 @@ fn main() -> Result<()> {
         "Trust score delta        : {:.6}",
         (trust_score - sample.expected_trust_score).abs()
     );
+
+    // benchmark single inference latency
+    let mut latencies_ms = Vec::with_capacity(100);
+
+    for _ in 0..100 {
+        let t0 = Instant::now();
+        let _ = attack_fn.call(&mut store, ())?;
+        let _ = trust_fn.call(&mut store, ())?;
+        let _ = action_fn.call(&mut store, ())?;
+        let elapsed_ms = t0.elapsed().as_secs_f64() * 1000.0;
+        latencies_ms.push(elapsed_ms);
+    }
+
+    let mean_ms = mean(&latencies_ms);
+    let mut latencies_sorted = latencies_ms.clone();
+    let median_ms = median(&mut latencies_sorted);
+    let max_ms = latencies_ms
+        .iter()
+        .cloned()
+        .fold(0.0_f64, |acc, x| acc.max(x));
+
+    // repeated run benchmark
+    let repeat_count = 1000;
+    let t0 = Instant::now();
+    for _ in 0..repeat_count {
+        let _ = attack_fn.call(&mut store, ())?;
+    }
+    let total_repeat_ms = t0.elapsed().as_secs_f64() * 1000.0;
+    let avg_repeat_ms = total_repeat_ms / repeat_count as f64;
+
+    println!("\n=== Wasm Benchmark ===");
+    println!("Single-run mean latency   : {:.6} ms", mean_ms);
+    println!("Single-run median latency : {:.6} ms", median_ms);
+    println!("Single-run max latency    : {:.6} ms", max_ms);
+    println!("Repeat count              : {}", repeat_count);
+    println!("Repeat total latency      : {:.6} ms", total_repeat_ms);
+    println!("Repeat avg latency        : {:.6} ms", avg_repeat_ms);
 
     Ok(())
 }
