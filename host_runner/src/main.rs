@@ -2,12 +2,38 @@ use anyhow::{anyhow, Result};
 use std::fs;
 use wasmtime::{Engine, Instance, Module, Store};
 
+fn action_name(code: i32) -> &'static str {
+    match code {
+        0 => "ALLOW",
+        1 => "LIMIT",
+        2 => "QUARANTINE",
+        3 => "BLOCK",
+        _ => "UNKNOWN",
+    }
+}
+
 #[derive(Debug, serde::Deserialize)]
-struct SampleInput {
-    feature_names: Vec<String>,
+struct SequenceSample {
     values: Vec<f64>,
-    expected_attack_probability: f64,
-    expected_trust_score: f64,
+    attack_probability: f64,
+    trust: f64,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct RetrievalKB {
+    feature_names: Vec<String>,
+    scaler_min: Vec<f64>,
+    scaler_max: Vec<f64>,
+    profiles: Vec<RetrievalProfile>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct RetrievalProfile {
+    name: String,
+    description: String,
+    profile_trust: f64,
+    count: usize,
+    centroid: Vec<f64>,
 }
 
 fn compute_history_score(history: &[f64], current: f64) -> f64 {
@@ -17,37 +43,88 @@ fn compute_history_score(history: &[f64], current: f64) -> f64 {
 
     let avg = history.iter().sum::<f64>() / history.len() as f64;
     let deviation = (current - avg).abs();
-
-    let mut score = 1.0 - deviation;
-    if score < 0.0 {
-        score = 0.0;
-    }
-    if score > 1.0 {
-        score = 1.0;
-    }
-
-    score
+    (1.0 - deviation).clamp(0.0, 1.0)
 }
 
-fn fuse_trust(model_trust: f64, history_score: f64) -> f64 {
-    0.7 * model_trust + 0.3 * history_score
+fn normalize_with_minmax(values: &[f64], mins: &[f64], maxs: &[f64]) -> Vec<f64> {
+    values
+        .iter()
+        .enumerate()
+        .map(|(i, &x)| {
+            let min = mins[i];
+            let max = maxs[i];
+            if (max - min).abs() < 1e-12 {
+                0.0
+            } else {
+                (x - min) / (max - min)
+            }
+        })
+        .collect()
 }
 
-fn action_name_from_trust(trust: f64) -> &'static str {
-    if trust >= 0.80 {
-        "ALLOW"
-    } else if trust >= 0.50 {
-        "LIMIT"
-    } else if trust >= 0.20 {
-        "QUARANTINE"
-    } else {
-        "BLOCK"
+fn euclidean_distance(a: &[f64], b: &[f64]) -> f64 {
+    a.iter()
+        .zip(b.iter())
+        .map(|(x, y)| {
+            let d = x - y;
+            d * d
+        })
+        .sum::<f64>()
+        .sqrt()
+}
+
+fn compute_retrieval_score(values: &[f64], kb: &RetrievalKB) -> (f64, String, f64, f64) {
+    let x_norm = normalize_with_minmax(values, &kb.scaler_min, &kb.scaler_max);
+
+    let mut best_profile: Option<&RetrievalProfile> = None;
+    let mut best_distance = f64::INFINITY;
+
+    for profile in &kb.profiles {
+        let dist = euclidean_distance(&x_norm, &profile.centroid);
+        if dist < best_distance {
+            best_distance = dist;
+            best_profile = Some(profile);
+        }
     }
+
+    let profile = best_profile.expect("Retrieval KB has no profiles");
+
+    let max_dist = (x_norm.len() as f64).sqrt();
+    let similarity = (1.0 - best_distance / max_dist).clamp(0.0, 1.0);
+
+    // Neutral fallback is 0.5 when similarity is weak
+    let retrieval_trust = similarity * profile.profile_trust + (1.0 - similarity) * 0.5;
+
+    (
+        retrieval_trust,
+        profile.name.clone(),
+        similarity,
+        profile.profile_trust,
+    )
+}
+
+fn fuse_trust(model_trust: f64, retrieval_trust: f64, history_score: f64) -> f64 {
+    0.5 * model_trust + 0.3 * retrieval_trust + 0.2 * history_score
+}
+
+fn write_sample_to_wasm_memory(
+    memory: &wasmtime::Memory,
+    store: &mut Store<()>,
+    ptr: usize,
+    values: &[f64],
+) -> Result<()> {
+    for (i, value) in values.iter().enumerate() {
+        let bytes = value.to_le_bytes();
+        let offset = ptr + i * 8;
+        memory.write(&mut *store, offset, &bytes)?;
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
     let wasm_path = "../wasm_module/target/wasm32-unknown-unknown/release/wasm_module.wasm";
-    let sample_path = "../results/models/numeric_dt_sample_input.json";
+    let sequence_path = "../results/models/sequence_input.json";
+    let kb_path = "../results/models/retrieval_kb.json";
 
     let engine = Engine::default();
     let module = Module::from_file(&engine, wasm_path)?;
@@ -66,88 +143,107 @@ fn main() -> Result<()> {
     let trust_fn =
         instance.get_typed_func::<(), i32>(&mut store, "predict_trust_score_x1000000")?;
 
-    let sample_str = fs::read_to_string(sample_path)?;
-    let sample: SampleInput = serde_json::from_str(&sample_str)?;
+    let sequence_str = fs::read_to_string(sequence_path)?;
+    let sequence: Vec<SequenceSample> = serde_json::from_str(&sequence_str)?;
+
+    let kb_str = fs::read_to_string(kb_path)?;
+    let kb: RetrievalKB = serde_json::from_str(&kb_str)?;
 
     let expected_count = get_count.call(&mut store, ())? as usize;
-    if sample.values.len() != expected_count {
+
+    if sequence.is_empty() {
+        return Err(anyhow!("Sequence is empty"));
+    }
+
+    if kb.feature_names.len() != expected_count {
         return Err(anyhow!(
-            "Feature count mismatch: sample has {}, model expects {}",
-            sample.values.len(),
+            "Retrieval KB feature count mismatch: kb has {}, model expects {}",
+            kb.feature_names.len(),
             expected_count
         ));
     }
 
-    let ptr = get_ptr.call(&mut store, ())? as usize;
-
-    // Initial write to Wasm memory
-    for (i, value) in sample.values.iter().enumerate() {
-        let bytes = value.to_le_bytes();
-        let offset = ptr + i * 8;
-        memory.write(&mut store, offset, &bytes)?;
+    for sample in &sequence {
+        if sample.values.len() != expected_count {
+            return Err(anyhow!(
+                "Feature count mismatch: sample has {}, model expects {}",
+                sample.values.len(),
+                expected_count
+            ));
+        }
     }
 
-    // Warm-up
-    let _ = attack_fn.call(&mut store, ())?;
-    let _ = trust_fn.call(&mut store, ())?;
+    let ptr = get_ptr.call(&mut store, ())? as usize;
 
-    println!("=== Temporal Trust Simulation ===");
-    println!("Feature count: {}", sample.feature_names.len());
+    println!("=== Retrieval-Augmented Trust Simulation ===");
+    println!("Feature count: {}", expected_count);
 
-    let mut trust_history: Vec<f64> = vec![0.91, 0.88, 0.86];
+    let mut trust_history: Vec<f64> = vec![];
     let max_history = 5;
 
-    let mut simulated_values = sample.values.clone();
+    for (step, sample) in sequence.iter().enumerate() {
+        write_sample_to_wasm_memory(&memory, &mut store, ptr, &sample.values)?;
 
-    for step in 1..=5 {
-        // Simulate gradual behavior drift
-        for value in &mut simulated_values {
-            *value *= 1.0 + (step as f64 * 0.02);
-        }
-
-        // Write updated values into Wasm memory
-        for (i, value) in simulated_values.iter().enumerate() {
-            let bytes = value.to_le_bytes();
-            let offset = ptr + i * 8;
-            memory.write(&mut store, offset, &bytes)?;
-        }
-
-        // Run Wasm inference
         let attack_prob_raw = attack_fn.call(&mut store, ())?;
         let trust_score_raw = trust_fn.call(&mut store, ())?;
 
         let attack_probability = attack_prob_raw as f64 / 1_000_000.0;
         let model_trust = trust_score_raw as f64 / 1_000_000.0;
 
-        // Behavior-aware layer
-        let history_score = compute_history_score(&trust_history, model_trust);
-        let final_trust = fuse_trust(model_trust, history_score);
-        let action = action_name_from_trust(final_trust);
+        let model_action = if model_trust >= 0.80 {
+            "ALLOW"
+        } else if model_trust >= 0.50 {
+            "LIMIT"
+        } else if model_trust >= 0.20 {
+            "QUARANTINE"
+        } else {
+            "BLOCK"
+        };
 
-        // Update trust history
+        let history_score = compute_history_score(&trust_history, model_trust);
+        let (retrieval_trust, profile_name, similarity, profile_trust) =
+            compute_retrieval_score(&sample.values, &kb);
+
+        let final_trust = fuse_trust(model_trust, retrieval_trust, history_score);
+
         trust_history.push(model_trust);
         if trust_history.len() > max_history {
             trust_history.remove(0);
         }
 
-        println!("\n--- Time Step t{} ---", step);
-        println!("Attack probability : {:.6}", attack_probability);
-        println!("Model trust M(x)   : {:.6}", model_trust);
-        println!("History score H(x) : {:.6}", history_score);
-        println!("Final trust T(x)   : {:.6}", final_trust);
-        println!("Action             : {}", action);
-        println!("History window     : {:?}", trust_history);
-    }
+        let final_action_code = if final_trust >= 0.80 {
+            0
+        } else if final_trust >= 0.50 {
+            1
+        } else if final_trust >= 0.20 {
+            2
+        } else {
+            3
+        };
 
-    println!("\n--- Reference (original sample before drift) ---");
-    println!(
-        "Expected attack probability: {:.6}",
-        sample.expected_attack_probability
-    );
-    println!(
-        "Expected trust score      : {:.6}",
-        sample.expected_trust_score
-    );
+        println!("\n--- Time Step t{} ---", step + 1);
+        println!("Attack probability : {:.6}", attack_probability);
+
+        println!("Model trust M(x)   : {:.6}", model_trust);
+        println!("Model action       : {}", model_action);
+
+        println!("History score H(x) : {:.6}", history_score);
+
+        println!("Retrieval profile  : {}", profile_name);
+        println!("Profile trust      : {:.6}", profile_trust);
+        println!("Similarity         : {:.6}", similarity);
+        println!("Retrieval trust R(x): {:.6}", retrieval_trust);
+
+        println!("Final trust T(x)   : {:.6}", final_trust);
+        println!("Final action       : {}", action_name(final_action_code));
+
+        println!("History window     : {:?}", trust_history);
+        println!("(Reference trust   : {:.6})", sample.trust);
+        println!(
+            "(Attack prob delta : {:.6})",
+            (attack_probability - sample.attack_probability).abs()
+        );
+    }
 
     Ok(())
 }
