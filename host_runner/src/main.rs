@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use std::fs;
-use std::time::Instant;
 use wasmtime::{Engine, Instance, Module, Store};
 
 fn action_name(code: i32) -> &'static str {
@@ -21,24 +20,28 @@ struct SampleInput {
     expected_trust_score: f64,
 }
 
-fn mean(values: &[f64]) -> f64 {
-    if values.is_empty() {
-        return 0.0;
+fn compute_history_score(history: &[f64], current: f64) -> f64 {
+    if history.is_empty() {
+        return current;
     }
-    values.iter().sum::<f64>() / values.len() as f64
+
+    let avg = history.iter().sum::<f64>() / history.len() as f64;
+    let deviation = (current - avg).abs();
+
+    let mut score = 1.0 - deviation;
+
+    if score < 0.0 {
+        score = 0.0;
+    }
+    if score > 1.0 {
+        score = 1.0;
+    }
+
+    score
 }
 
-fn median(values: &mut [f64]) -> f64 {
-    if values.is_empty() {
-        return 0.0;
-    }
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let mid = values.len() / 2;
-    if values.len() % 2 == 0 {
-        (values[mid - 1] + values[mid]) / 2.0
-    } else {
-        values[mid]
-    }
+fn fuse_trust(model_trust: f64, history_score: f64) -> f64 {
+    0.7 * model_trust + 0.3 * history_score
 }
 
 fn main() -> Result<()> {
@@ -61,7 +64,7 @@ fn main() -> Result<()> {
         instance.get_typed_func::<(), i32>(&mut store, "predict_attack_probability_x1000000")?;
     let trust_fn =
         instance.get_typed_func::<(), i32>(&mut store, "predict_trust_score_x1000000")?;
-    let action_fn = instance.get_typed_func::<(), i32>(&mut store, "predict_action_code")?;
+    let _action_fn = instance.get_typed_func::<(), i32>(&mut store, "predict_action_code")?;
 
     let sample_str = fs::read_to_string(sample_path)?;
     let sample: SampleInput = serde_json::from_str(&sample_str)?;
@@ -77,78 +80,70 @@ fn main() -> Result<()> {
 
     let ptr = get_ptr.call(&mut store, ())? as usize;
 
-    // write f64 values into Wasm memory once
+    // Write f64 values into Wasm memory once
     for (i, value) in sample.values.iter().enumerate() {
         let bytes = value.to_le_bytes();
         let offset = ptr + i * 8;
         memory.write(&mut store, offset, &bytes)?;
     }
 
-    // warm-up
+    // Simulated recent trust history
+    let mut trust_history: Vec<f64> = vec![0.91, 0.88, 0.86, 0.83];
+    let max_history = 5;
+
+    // Warm-up
     let _ = attack_fn.call(&mut store, ())?;
     let _ = trust_fn.call(&mut store, ())?;
-    let _ = action_fn.call(&mut store, ())?;
 
-    // one correctness run
+    // Current model output
     let attack_prob_raw = attack_fn.call(&mut store, ())?;
     let trust_score_raw = trust_fn.call(&mut store, ())?;
-    let action_code = action_fn.call(&mut store, ())?;
 
     let attack_probability = attack_prob_raw as f64 / 1_000_000.0;
-    let trust_score = trust_score_raw as f64 / 1_000_000.0;
+    let model_trust = trust_score_raw as f64 / 1_000_000.0;
 
-    println!("=== Generalized Wasm Inference ===");
+    // Behavior-memory layer
+    let history_score = compute_history_score(&trust_history, model_trust);
+    let final_trust = fuse_trust(model_trust, history_score);
+
+    // Update history after computing current decision
+    trust_history.push(model_trust);
+    if trust_history.len() > max_history {
+        trust_history.remove(0);
+    }
+
+    let final_action_code = if final_trust >= 0.80 {
+        0
+    } else if final_trust >= 0.50 {
+        1
+    } else if final_trust >= 0.20 {
+        2
+    } else {
+        3
+    };
+
+    println!("=== Behavior-Aware Trust Inference ===");
     println!("Feature count            : {}", sample.values.len());
+
+    println!("\n--- Model Output ---");
     println!("Attack probability       : {:.6}", attack_probability);
-    println!("Trust score              : {:.6}", trust_score);
-    println!("Policy action            : {}", action_name(action_code));
+    println!("Model trust (M(x))       : {:.6}", model_trust);
+
+    println!("\n--- Behavior Layer ---");
+    println!("History (last N)         : {:?}", trust_history);
+    println!("History score (H(x))     : {:.6}", history_score);
+
+    println!("\n--- Final Decision ---");
+    println!("Final trust (T(x))       : {:.6}", final_trust);
+    println!("Policy action            : {}", action_name(final_action_code));
+
+    println!("\n--- Reference ---");
     println!("Expected attack prob     : {:.6}", sample.expected_attack_probability);
     println!("Expected trust score     : {:.6}", sample.expected_trust_score);
     println!(
         "Attack probability delta : {:.6}",
         (attack_probability - sample.expected_attack_probability).abs()
     );
-    println!(
-        "Trust score delta        : {:.6}",
-        (trust_score - sample.expected_trust_score).abs()
-    );
-
-    // benchmark single inference latency
-    let mut latencies_ms = Vec::with_capacity(100);
-
-    for _ in 0..100 {
-        let t0 = Instant::now();
-        let _ = attack_fn.call(&mut store, ())?;
-        let _ = trust_fn.call(&mut store, ())?;
-        let _ = action_fn.call(&mut store, ())?;
-        let elapsed_ms = t0.elapsed().as_secs_f64() * 1000.0;
-        latencies_ms.push(elapsed_ms);
-    }
-
-    let mean_ms = mean(&latencies_ms);
-    let mut latencies_sorted = latencies_ms.clone();
-    let median_ms = median(&mut latencies_sorted);
-    let max_ms = latencies_ms
-        .iter()
-        .cloned()
-        .fold(0.0_f64, |acc, x| acc.max(x));
-
-    // repeated run benchmark
-    let repeat_count = 1000;
-    let t0 = Instant::now();
-    for _ in 0..repeat_count {
-        let _ = attack_fn.call(&mut store, ())?;
-    }
-    let total_repeat_ms = t0.elapsed().as_secs_f64() * 1000.0;
-    let avg_repeat_ms = total_repeat_ms / repeat_count as f64;
-
-    println!("\n=== Wasm Benchmark ===");
-    println!("Single-run mean latency   : {:.6} ms", mean_ms);
-    println!("Single-run median latency : {:.6} ms", median_ms);
-    println!("Single-run max latency    : {:.6} ms", max_ms);
-    println!("Repeat count              : {}", repeat_count);
-    println!("Repeat total latency      : {:.6} ms", total_repeat_ms);
-    println!("Repeat avg latency        : {:.6} ms", avg_repeat_ms);
 
     Ok(())
 }
