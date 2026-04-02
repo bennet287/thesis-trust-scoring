@@ -92,7 +92,8 @@ fn compute_retrieval_score(values: &[f64], kb: &RetrievalKB) -> (f64, String, f6
     let max_dist = (x_norm.len() as f64).sqrt();
     let similarity = (1.0 - best_distance / max_dist).clamp(0.0, 1.0);
 
-    // Neutral fallback is 0.5 when similarity is weak
+    // Retrieval trust is interpolated between the profile trust and a neutral 0.5,
+    // depending on how similar the sample is to the matched profile.
     let retrieval_trust = similarity * profile.profile_trust + (1.0 - similarity) * 0.5;
 
     (
@@ -103,8 +104,24 @@ fn compute_retrieval_score(values: &[f64], kb: &RetrievalKB) -> (f64, String, f6
     )
 }
 
-fn fuse_trust(model_trust: f64, retrieval_trust: f64, history_score: f64) -> f64 {
-    0.5 * model_trust + 0.3 * retrieval_trust + 0.2 * history_score
+fn fuse_trust(
+    model_trust: f64,
+    retrieval_trust: f64,
+    history_score: f64,
+) -> (f64, f64, f64, f64) {
+    let (w_m, w_r, w_h) = if model_trust >= 0.90 || model_trust <= 0.10 {
+        // Very confident model -> retrieval influence should be very small
+        (0.80, 0.05, 0.15)
+    } else if model_trust >= 0.75 || model_trust <= 0.25 {
+        // Moderately confident model -> retrieval helps a bit
+        (0.65, 0.15, 0.20)
+    } else {
+        // Uncertain region -> retrieval can help more
+        (0.50, 0.30, 0.20)
+    };
+
+    let final_trust = w_m * model_trust + w_r * retrieval_trust + w_h * history_score;
+    (final_trust, w_m, w_r, w_h)
 }
 
 fn write_sample_to_wasm_memory(
@@ -175,7 +192,7 @@ fn main() -> Result<()> {
 
     let ptr = get_ptr.call(&mut store, ())? as usize;
 
-    println!("=== Retrieval-Augmented Trust Simulation ===");
+    println!("=== Retrieval-Augmented Trust Simulation (Calibrated) ===");
     println!("Feature count: {}", expected_count);
 
     let mut trust_history: Vec<f64> = vec![];
@@ -204,7 +221,8 @@ fn main() -> Result<()> {
         let (retrieval_trust, profile_name, similarity, profile_trust) =
             compute_retrieval_score(&sample.values, &kb);
 
-        let final_trust = fuse_trust(model_trust, retrieval_trust, history_score);
+        let (final_trust, w_m, w_r, w_h) =
+            fuse_trust(model_trust, retrieval_trust, history_score);
 
         trust_history.push(model_trust);
         if trust_history.len() > max_history {
@@ -233,6 +251,11 @@ fn main() -> Result<()> {
         println!("Profile trust      : {:.6}", profile_trust);
         println!("Similarity         : {:.6}", similarity);
         println!("Retrieval trust R(x): {:.6}", retrieval_trust);
+
+        println!(
+            "Fusion weights      : M={:.2}, R={:.2}, H={:.2}",
+            w_m, w_r, w_h
+        );
 
         println!("Final trust T(x)   : {:.6}", final_trust);
         println!("Final action       : {}", action_name(final_action_code));
