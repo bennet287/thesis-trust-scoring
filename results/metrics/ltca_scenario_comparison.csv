@@ -1,0 +1,4 @@
+Scenario,Naive Errors,LTCA Errors,Steps
+Normal,0,0,3
+Attack,2,1,5
+Noise,2,1,2

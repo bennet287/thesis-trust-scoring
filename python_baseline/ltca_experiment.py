@@ -1,5 +1,6 @@
 import json
 import time
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,6 +36,12 @@ def policy(trust: float) -> str:
     elif trust >= 0.20:
         return "QUARANTINE"
     return "BLOCK"
+
+
+def adjust_for_trend(trust: float, history_values) -> float:
+    if is_degrading(history_values):
+        return max(0.0, trust - 0.15)
+    return trust
 
 
 # -----------------------------
@@ -113,6 +120,17 @@ def retrieval(x: np.ndarray, profiles):
     }
 
 
+def retrieval_with_override(x: np.ndarray, profiles, override_r=None):
+    rinfo = retrieval(x, profiles)
+    if override_r is None:
+        return rinfo
+
+    forced_r = float(override_r)
+    rinfo["R"] = forced_r
+    rinfo["profile_name"] = f"OVERRIDE({forced_r:.3f})"
+    return rinfo
+
+
 # -----------------------------
 # Confidence regime + fusion
 # -----------------------------
@@ -122,14 +140,36 @@ def confidence_regime(M: float) -> str:
     return "UNCERTAIN"
 
 
-def gated_weights(regime: str):
-    if regime == "HIGH":
-        return (0.80, 0.05, 0.15)
-    return (0.50, 0.30, 0.20)
+def is_degrading(history_values) -> bool:
+    if len(history_values) < 3:
+        return False
+    return history_values[-1] < history_values[-2] < history_values[-3]
 
 
-def fuse(M: float, R: float, H: float, regime: str) -> float:
-    wM, wR, wH = gated_weights(regime)
+def compute_weights(M: float, R: float, H: float, history_values):
+    confidence = abs(M - 0.5) * 2.0
+    agreement = 1.0 - (abs(M - R) + abs(M - H)) / 2.0
+    agreement = max(0.0, min(1.0, agreement))
+
+    if len(history_values) >= 2:
+        previous_h = float(sum(history_values[:-1]) / len(history_values[:-1]))
+        trend = max(0.0, previous_h - H)
+    else:
+        trend = 0.0
+
+    wM = 0.5 + 0.5 * confidence + 0.3 * trend
+    wR = 0.3 * agreement
+    wH = 0.2 + 0.2 * (1.0 - confidence)
+
+    total = wM + wR + wH
+    if total <= 0.0:
+        return (0.5, 0.3, 0.2)
+
+    return (wM / total, wR / total, wH / total)
+
+
+def fuse(M: float, R: float, H: float, weights) -> float:
+    wM, wR, wH = weights
     return float(wM * M + wR * R + wH * H)
 
 
@@ -158,7 +198,23 @@ def load_sequence(sequence_path: Path):
     with open(sequence_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    if "samples" in data:
+    scenario_name = sequence_path.stem
+    retrieval_overrides = None
+    expected_labels = None
+
+    # Scenario bundle format: [{"name": ..., "samples": ..., "retrieval": ...}, ...]
+    if isinstance(data, list) and data and isinstance(data[0], dict) and "name" in data[0] and "samples" in data[0]:
+        raise ValueError(
+            "Scenario bundle detected. Please pass a single scenario file, or use a dedicated loader."
+        )
+
+    # Single scenario format: {"name": ..., "samples": [...], "retrieval": [...], "expected": [...]}
+    if isinstance(data, dict) and "samples" in data:
+        scenario_name = data.get("name", scenario_name)
+        retrieval_overrides = data.get("retrieval")
+        expected_labels = data.get("expected")
+        samples = data["samples"]
+    elif "samples" in data:
         samples = data["samples"]
     elif "sequence" in data:
         samples = data["sequence"]
@@ -189,7 +245,22 @@ def load_sequence(sequence_path: Path):
         else:
             parsed.append(np.array(row, dtype=np.float64))
 
-    return parsed
+    if retrieval_overrides is not None and len(retrieval_overrides) != len(parsed):
+        raise ValueError(
+            "Length mismatch: retrieval overrides must match number of samples."
+        )
+
+    if expected_labels is not None and len(expected_labels) != len(parsed):
+        raise ValueError(
+            "Length mismatch: expected labels must match number of samples."
+        )
+
+    return {
+        "name": scenario_name,
+        "samples": parsed,
+        "retrieval": retrieval_overrides,
+        "expected": expected_labels,
+    }
 
 
 # -----------------------------
@@ -208,20 +279,24 @@ def log_result(step: int, result: dict):
 # -----------------------------
 # LTCA pipeline
 # -----------------------------
-def ltca_pipeline(x: np.ndarray, pipeline, profiles, history_buffer: HistoryBuffer):
+def ltca_pipeline(x: np.ndarray, pipeline, profiles, history_buffer: HistoryBuffer, retrieval_override=None):
     attack_prob, M = model_trust(pipeline, x)
 
-    rinfo = retrieval(x, profiles)
+    rinfo = retrieval_with_override(x, profiles, retrieval_override)
     R = rinfo["R"]
 
     H = history_buffer.compute()
     regime = confidence_regime(M)
+    history_before = history_buffer.snapshot()
+    weights = compute_weights(M, R, H, history_before)
+    trend_sensitive = is_degrading(history_before)
 
     T_naive = naive_fusion(M, R, H)
     A_naive = policy(T_naive)
 
-    T = fuse(M, R, H, regime)
-    A = policy(T)
+    T = fuse(M, R, H, weights)
+    T_adjusted = adjust_for_trend(T, history_before)
+    A = policy(T_adjusted)
 
     result = {
         "attack_probability": attack_prob,
@@ -231,12 +306,14 @@ def ltca_pipeline(x: np.ndarray, pipeline, profiles, history_buffer: HistoryBuff
         "T_naive": T_naive,
         "A_naive": A_naive,
         "T": T,
+        "T_adjusted": T_adjusted,
         "A": A,
         "regime": regime,
-        "weights": gated_weights(regime),
+        "weights": weights,
+        "trend_sensitive": trend_sensitive,
         "retrieval_profile": rinfo["profile_name"],
         "retrieval_similarity": rinfo["similarity"],
-        "history_before_update": history_buffer.snapshot(),
+        "history_before_update": history_before,
     }
 
     history_buffer.update(T)
@@ -245,32 +322,88 @@ def ltca_pipeline(x: np.ndarray, pipeline, profiles, history_buffer: HistoryBuff
     return result
 
 
+def evaluate_decisions(rows, expected_labels):
+    if expected_labels is None:
+        return None
+
+    naive_errors = 0
+    ltca_errors = 0
+    for row, expected in zip(rows, expected_labels):
+        if row["A_naive"] != expected:
+            naive_errors += 1
+        if row["A_ltca"] != expected:
+            ltca_errors += 1
+
+    return {
+        "naive_errors": naive_errors,
+        "ltca_errors": ltca_errors,
+        "total_steps": len(expected_labels),
+    }
+
+
 # -----------------------------
 # Main experiment
 # -----------------------------
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run LTCA experiment for one scenario file.")
+    parser.add_argument(
+        "--sequence",
+        type=Path,
+        default=SEQUENCE_PATH,
+        help="Path to sequence file (raw list or scenario dict with samples/retrieval/expected).",
+    )
+    parser.add_argument(
+        "--label",
+        type=str,
+        default=None,
+        help="Optional scenario label to use in output file names.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    sequence_path = args.sequence
+
+    sequence_bundle = load_sequence(sequence_path)
+    scenario_name = args.label if args.label else sequence_bundle["name"]
+    safe_name = scenario_name.replace(" ", "_")
+    run_log_path = LOGS_DIR / f"ltca_experiment_{safe_name}.jsonl"
+
     print("=== LTCA Experiment Runner ===")
     print(f"Project root : {PROJECT_ROOT}")
     print(f"Pipeline     : {PIPELINE_PATH}")
     print(f"KB           : {KB_PATH}")
-    print(f"Sequence     : {SEQUENCE_PATH}")
-    print(f"Log output   : {LOG_PATH}")
+    print(f"Sequence     : {sequence_path}")
+    print(f"Scenario     : {scenario_name}")
+    print(f"Log output   : {run_log_path}")
     print()
 
     pipeline = load_pipeline()
     profiles = load_profiles(KB_PATH)
-    sequence = load_sequence(SEQUENCE_PATH)
+    sequence = sequence_bundle["samples"]
+    retrieval_overrides = sequence_bundle["retrieval"]
+    expected_labels = sequence_bundle["expected"]
 
     history = HistoryBuffer(window_size=4, neutral_prior=0.5)
 
-    if LOG_PATH.exists():
-        LOG_PATH.unlink()
+    if run_log_path.exists():
+        run_log_path.unlink()
 
     rows = []
 
     for i, x in enumerate(sequence, start=1):
-        res = ltca_pipeline(x, pipeline, profiles, history)
-        log_result(i, res)
+        retrieval_override = None if retrieval_overrides is None else retrieval_overrides[i - 1]
+        res = ltca_pipeline(x, pipeline, profiles, history, retrieval_override=retrieval_override)
+
+        entry = {
+            "step": i,
+            "timestamp": time.time(),
+            "scenario": scenario_name,
+            **res,
+        }
+        with open(run_log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
 
         print(f"--- t{i} ---")
         print(f"Attack probability : {res['attack_probability']:.6f}")
@@ -290,6 +423,7 @@ def main():
 
         rows.append({
             "t": i,
+            "scenario": scenario_name,
             "attack_probability": res["attack_probability"],
             "M": res["M"],
             "R": res["R"],
@@ -304,12 +438,30 @@ def main():
         })
 
     df = pd.DataFrame(rows)
-    out_csv = RESULTS_DIR / "metrics" / "ltca_experiment_summary.csv"
+    out_csv = RESULTS_DIR / "metrics" / f"ltca_experiment_summary_{safe_name}.csv"
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_csv, index=False)
 
+    metrics_path = RESULTS_DIR / "metrics" / f"ltca_metrics_{safe_name}.json"
+    metrics_payload = {
+        "scenario": scenario_name,
+        "steps": len(rows),
+    }
+    eval_metrics = evaluate_decisions(rows, expected_labels)
+    if eval_metrics is not None:
+        metrics_payload.update(eval_metrics)
+
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics_payload, f, indent=2)
+
     print("Saved summary to:", out_csv)
-    print("Saved JSONL log to:", LOG_PATH)
+    print("Saved JSONL log to:", run_log_path)
+    print("Saved metrics to:", metrics_path)
+
+    if eval_metrics is not None:
+        print("\nScenario error metrics")
+        print(f"Naive errors : {eval_metrics['naive_errors']}/{eval_metrics['total_steps']}")
+        print(f"LTCA errors  : {eval_metrics['ltca_errors']}/{eval_metrics['total_steps']}")
 
 
 if __name__ == "__main__":

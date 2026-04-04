@@ -1,0 +1,7 @@
+{
+  "scenario": "attack",
+  "steps": 5,
+  "naive_errors": 2,
+  "ltca_errors": 1,
+  "total_steps": 5
+}

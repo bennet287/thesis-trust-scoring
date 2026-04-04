@@ -1,0 +1,7 @@
+{
+  "scenario": "normal",
+  "steps": 3,
+  "naive_errors": 0,
+  "ltca_errors": 0,
+  "total_steps": 3
+}
