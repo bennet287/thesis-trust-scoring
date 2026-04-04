@@ -163,10 +163,24 @@ def is_degrading(history_values) -> bool:
     return history_values[-1] < history_values[-2] < history_values[-3]
 
 
-def compute_weights(M: float, R: float, H: float, history_values):
-    confidence = abs(M - 0.5) * 2.0
+def compute_model_confidence(M: float) -> float:
+    return max(0.0, min(1.0, abs(M - 0.5) * 2.0))
+
+
+def compute_signal_agreement(M: float, R: float, H: float) -> float:
     agreement = 1.0 - (abs(M - R) + abs(M - H)) / 2.0
-    agreement = max(0.0, min(1.0, agreement))
+    return max(0.0, min(1.0, agreement))
+
+
+def compute_trend_value(history_values):
+    if len(history_values) < 3:
+        return 0.0
+    return float(history_values[-1] - history_values[-3])
+
+
+def compute_weights(M: float, R: float, H: float, history_values):
+    confidence = compute_model_confidence(M)
+    agreement = compute_signal_agreement(M, R, H)
 
     if len(history_values) >= 2:
         previous_h = float(sum(history_values[:-1]) / len(history_values[:-1]))
@@ -314,6 +328,9 @@ def ltca_pipeline(
     history_before = history_buffer.snapshot()
     weights = compute_weights(M, R, H, history_before)
     trend_sensitive = is_degrading(history_before)
+    model_confidence = compute_model_confidence(M)
+    signal_agreement = compute_signal_agreement(M, R, H)
+    trend_value = compute_trend_value(history_before)
 
     T_naive = naive_fusion(M, R, H)
     A_naive = policy(T_naive, policy_cfg)
@@ -324,6 +341,7 @@ def ltca_pipeline(
     T = fuse(M, R, H, weights)
     T_adjusted = adjust_for_trend(T, history_before, policy_cfg)
     A = policy(T_adjusted, policy_cfg)
+    trend_penalty = max(0.0, float(T - T_adjusted))
 
     result = {
         "attack_probability": attack_prob,
@@ -337,6 +355,13 @@ def ltca_pipeline(
         "T": T,
         "T_adjusted": T_adjusted,
         "A": A,
+        "model_confidence": model_confidence,
+        "signal_agreement": signal_agreement,
+        "trend_value": trend_value,
+        "trend_penalty": trend_penalty,
+        "t_fused": T,
+        "t_final": T_adjusted,
+        "policy_action": A,
         "regime": regime,
         "weights": weights,
         "trend_sensitive": trend_sensitive,
@@ -489,7 +514,11 @@ def main():
         print(f"Regime             : {res['regime']}")
         print(f"Model T(x)         : {res['T_model']:.6f}  -> {res['A_model']}")
         print(f"Naive T(x)         : {res['T_naive']:.6f}  -> {res['A_naive']}")
-        print(f"LTCA  T(x)         : {res['T']:.6f}  -> {res['A']}")
+        print(f"LTCA fused T(x)    : {res['t_fused']:.6f}")
+        print(f"LTCA final T(x)    : {res['t_final']:.6f}  -> {res['policy_action']}")
+        print(f"Model confidence   : {res['model_confidence']:.6f}")
+        print(f"Signal agreement   : {res['signal_agreement']:.6f}")
+        print(f"Trend penalty      : {res['trend_penalty']:.6f}")
         print(f"Weights            : {res['weights']}")
         print(f"History before     : {res['history_before_update']}")
         print(f"History after      : {res['history_after_update']}")
@@ -506,7 +535,13 @@ def main():
             "H": res["H"],
             "T_naive": res["T_naive"],
             "A_naive": res["A_naive"],
-            "T_ltca": res["T"],
+            "model_confidence": res["model_confidence"],
+            "signal_agreement": res["signal_agreement"],
+            "trend_penalty": res["trend_penalty"],
+            "T_fused": res["t_fused"],
+            "T_final": res["t_final"],
+            "policy_action": res["policy_action"],
+            "T_ltca": res["t_final"],
             "A_ltca": res["A"],
             "regime": res["regime"],
             "retrieval_profile": res["retrieval_profile"],
