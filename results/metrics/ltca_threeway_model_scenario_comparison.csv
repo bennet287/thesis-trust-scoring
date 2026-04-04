@@ -1,0 +1,7 @@
+Model,Scenario,Model-only Errors,Naive Errors,LTCA Errors,Steps,Allow Threshold,Limit Threshold,Block Threshold,Mild Trend Thresh,Strong Trend Thresh,Mild Penalty,Strong Penalty
+DT,Normal,1,1,1,3,0.8,0.5,0.2,-0.04,-0.1,0.08,0.16
+DT,Attack,3,2,3,5,0.8,0.5,0.2,-0.04,-0.1,0.08,0.16
+DT,Noise,0,2,0,2,0.8,0.5,0.2,-0.04,-0.1,0.08,0.16
+RF,Normal,1,1,1,3,0.8,0.5,0.2,-0.04,-0.1,0.08,0.16
+RF,Attack,2,3,3,5,0.8,0.5,0.2,-0.04,-0.1,0.08,0.16
+RF,Noise,0,2,1,2,0.8,0.5,0.2,-0.04,-0.1,0.08,0.16

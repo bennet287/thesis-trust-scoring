@@ -28,19 +28,36 @@ LOG_PATH = LOGS_DIR / "ltca_experiment.jsonl"
 # -----------------------------
 # Policy
 # -----------------------------
-def policy(trust: float) -> str:
-    if trust >= 0.80:
+@dataclass
+class PolicyConfig:
+    allow_threshold: float = 0.80
+    limit_threshold: float = 0.50
+    block_threshold: float = 0.20
+    mild_trend_threshold: float = -0.05
+    strong_trend_threshold: float = -0.10
+    mild_penalty: float = 0.10
+    strong_penalty: float = 0.20
+
+
+def policy(trust: float, cfg: PolicyConfig) -> str:
+    if trust >= cfg.allow_threshold:
         return "ALLOW"
-    elif trust >= 0.50:
+    elif trust >= cfg.limit_threshold:
         return "LIMIT"
-    elif trust >= 0.20:
+    elif trust >= cfg.block_threshold:
         return "QUARANTINE"
     return "BLOCK"
 
 
-def adjust_for_trend(trust: float, history_values) -> float:
-    if is_degrading(history_values):
-        return max(0.0, trust - 0.15)
+def adjust_for_trend(trust: float, history_values, cfg: PolicyConfig):
+    if len(history_values) < 3:
+        return trust
+
+    trend = history_values[-1] - history_values[-3]
+    if trend <= cfg.strong_trend_threshold:
+        return max(0.0, trust - cfg.strong_penalty)
+    if trend <= cfg.mild_trend_threshold:
+        return max(0.0, trust - cfg.mild_penalty)
     return trust
 
 
@@ -180,8 +197,8 @@ def naive_fusion(M: float, R: float, H: float) -> float:
 # -----------------------------
 # Model inference
 # -----------------------------
-def load_pipeline():
-    return joblib.load(PIPELINE_PATH)
+def load_pipeline(pipeline_path: Path):
+    return joblib.load(pipeline_path)
 
 
 def model_trust(pipeline, x: np.ndarray):
@@ -279,7 +296,14 @@ def log_result(step: int, result: dict):
 # -----------------------------
 # LTCA pipeline
 # -----------------------------
-def ltca_pipeline(x: np.ndarray, pipeline, profiles, history_buffer: HistoryBuffer, retrieval_override=None):
+def ltca_pipeline(
+    x: np.ndarray,
+    pipeline,
+    profiles,
+    history_buffer: HistoryBuffer,
+    policy_cfg: PolicyConfig,
+    retrieval_override=None,
+):
     attack_prob, M = model_trust(pipeline, x)
 
     rinfo = retrieval_with_override(x, profiles, retrieval_override)
@@ -292,15 +316,20 @@ def ltca_pipeline(x: np.ndarray, pipeline, profiles, history_buffer: HistoryBuff
     trend_sensitive = is_degrading(history_before)
 
     T_naive = naive_fusion(M, R, H)
-    A_naive = policy(T_naive)
+    A_naive = policy(T_naive, policy_cfg)
+
+    T_model = M
+    A_model = policy(T_model, policy_cfg)
 
     T = fuse(M, R, H, weights)
-    T_adjusted = adjust_for_trend(T, history_before)
-    A = policy(T_adjusted)
+    T_adjusted = adjust_for_trend(T, history_before, policy_cfg)
+    A = policy(T_adjusted, policy_cfg)
 
     result = {
         "attack_probability": attack_prob,
         "M": M,
+        "T_model": T_model,
+        "A_model": A_model,
         "R": R,
         "H": H,
         "T_naive": T_naive,
@@ -326,15 +355,19 @@ def evaluate_decisions(rows, expected_labels):
     if expected_labels is None:
         return None
 
+    model_errors = 0
     naive_errors = 0
     ltca_errors = 0
     for row, expected in zip(rows, expected_labels):
+        if row["A_model"] != expected:
+            model_errors += 1
         if row["A_naive"] != expected:
             naive_errors += 1
         if row["A_ltca"] != expected:
             ltca_errors += 1
 
     return {
+        "model_errors": model_errors,
         "naive_errors": naive_errors,
         "ltca_errors": ltca_errors,
         "total_steps": len(expected_labels),
@@ -358,28 +391,61 @@ def parse_args():
         default=None,
         help="Optional scenario label to use in output file names.",
     )
+    parser.add_argument(
+        "--pipeline",
+        type=Path,
+        default=PIPELINE_PATH,
+        help="Path to sklearn pipeline joblib used to compute M(x).",
+    )
+    parser.add_argument(
+        "--model-tag",
+        type=str,
+        default=None,
+        help="Optional model tag for output file names (e.g., dt, rf).",
+    )
+    parser.add_argument("--allow-threshold", type=float, default=0.80)
+    parser.add_argument("--limit-threshold", type=float, default=0.50)
+    parser.add_argument("--block-threshold", type=float, default=0.20)
+    parser.add_argument("--mild-trend-threshold", type=float, default=-0.05)
+    parser.add_argument("--strong-trend-threshold", type=float, default=-0.10)
+    parser.add_argument("--mild-penalty", type=float, default=0.10)
+    parser.add_argument("--strong-penalty", type=float, default=0.20)
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     sequence_path = args.sequence
+    pipeline_path = args.pipeline
+
+    policy_cfg = PolicyConfig(
+        allow_threshold=args.allow_threshold,
+        limit_threshold=args.limit_threshold,
+        block_threshold=args.block_threshold,
+        mild_trend_threshold=args.mild_trend_threshold,
+        strong_trend_threshold=args.strong_trend_threshold,
+        mild_penalty=args.mild_penalty,
+        strong_penalty=args.strong_penalty,
+    )
 
     sequence_bundle = load_sequence(sequence_path)
     scenario_name = args.label if args.label else sequence_bundle["name"]
+    model_tag = args.model_tag if args.model_tag else pipeline_path.stem.replace("_pipeline", "")
     safe_name = scenario_name.replace(" ", "_")
-    run_log_path = LOGS_DIR / f"ltca_experiment_{safe_name}.jsonl"
+    run_log_path = LOGS_DIR / f"ltca_experiment_{model_tag}_{safe_name}.jsonl"
 
     print("=== LTCA Experiment Runner ===")
     print(f"Project root : {PROJECT_ROOT}")
-    print(f"Pipeline     : {PIPELINE_PATH}")
+    print(f"Pipeline     : {pipeline_path}")
     print(f"KB           : {KB_PATH}")
     print(f"Sequence     : {sequence_path}")
+    print(f"Model tag    : {model_tag}")
     print(f"Scenario     : {scenario_name}")
     print(f"Log output   : {run_log_path}")
+    print(f"Policy       : {policy_cfg}")
     print()
 
-    pipeline = load_pipeline()
+    pipeline = load_pipeline(pipeline_path)
     profiles = load_profiles(KB_PATH)
     sequence = sequence_bundle["samples"]
     retrieval_overrides = sequence_bundle["retrieval"]
@@ -394,7 +460,14 @@ def main():
 
     for i, x in enumerate(sequence, start=1):
         retrieval_override = None if retrieval_overrides is None else retrieval_overrides[i - 1]
-        res = ltca_pipeline(x, pipeline, profiles, history, retrieval_override=retrieval_override)
+        res = ltca_pipeline(
+            x,
+            pipeline,
+            profiles,
+            history,
+            policy_cfg=policy_cfg,
+            retrieval_override=retrieval_override,
+        )
 
         entry = {
             "step": i,
@@ -414,6 +487,7 @@ def main():
         )
         print(f"H(x)               : {res['H']:.6f}")
         print(f"Regime             : {res['regime']}")
+        print(f"Model T(x)         : {res['T_model']:.6f}  -> {res['A_model']}")
         print(f"Naive T(x)         : {res['T_naive']:.6f}  -> {res['A_naive']}")
         print(f"LTCA  T(x)         : {res['T']:.6f}  -> {res['A']}")
         print(f"Weights            : {res['weights']}")
@@ -426,6 +500,8 @@ def main():
             "scenario": scenario_name,
             "attack_probability": res["attack_probability"],
             "M": res["M"],
+            "T_model": res["T_model"],
+            "A_model": res["A_model"],
             "R": res["R"],
             "H": res["H"],
             "T_naive": res["T_naive"],
@@ -438,14 +514,24 @@ def main():
         })
 
     df = pd.DataFrame(rows)
-    out_csv = RESULTS_DIR / "metrics" / f"ltca_experiment_summary_{safe_name}.csv"
+    out_csv = RESULTS_DIR / "metrics" / f"ltca_experiment_summary_{model_tag}_{safe_name}.csv"
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_csv, index=False)
 
-    metrics_path = RESULTS_DIR / "metrics" / f"ltca_metrics_{safe_name}.json"
+    metrics_path = RESULTS_DIR / "metrics" / f"ltca_metrics_{model_tag}_{safe_name}.json"
     metrics_payload = {
+        "model_tag": model_tag,
         "scenario": scenario_name,
         "steps": len(rows),
+        "policy": {
+            "allow_threshold": policy_cfg.allow_threshold,
+            "limit_threshold": policy_cfg.limit_threshold,
+            "block_threshold": policy_cfg.block_threshold,
+            "mild_trend_threshold": policy_cfg.mild_trend_threshold,
+            "strong_trend_threshold": policy_cfg.strong_trend_threshold,
+            "mild_penalty": policy_cfg.mild_penalty,
+            "strong_penalty": policy_cfg.strong_penalty,
+        },
     }
     eval_metrics = evaluate_decisions(rows, expected_labels)
     if eval_metrics is not None:
@@ -460,6 +546,7 @@ def main():
 
     if eval_metrics is not None:
         print("\nScenario error metrics")
+        print(f"Model errors : {eval_metrics['model_errors']}/{eval_metrics['total_steps']}")
         print(f"Naive errors : {eval_metrics['naive_errors']}/{eval_metrics['total_steps']}")
         print(f"LTCA errors  : {eval_metrics['ltca_errors']}/{eval_metrics['total_steps']}")
 

@@ -1,0 +1,33 @@
+{
+  "model": "rf",
+  "score": 9,
+  "config": {
+    "allow_threshold": 0.8,
+    "limit_threshold": 0.5,
+    "block_threshold": 0.2,
+    "mild_trend_threshold": -0.04,
+    "strong_trend_threshold": -0.1,
+    "mild_penalty": 0.08,
+    "strong_penalty": 0.16
+  },
+  "per_scenario": {
+    "normal": {
+      "model_errors": 0,
+      "naive_errors": 0,
+      "ltca_errors": 0,
+      "total_steps": 3
+    },
+    "attack": {
+      "model_errors": 5,
+      "naive_errors": 4,
+      "ltca_errors": 3,
+      "total_steps": 5
+    },
+    "noise": {
+      "model_errors": 0,
+      "naive_errors": 2,
+      "ltca_errors": 0,
+      "total_steps": 2
+    }
+  }
+}

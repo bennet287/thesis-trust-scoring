@@ -1,0 +1,7 @@
+Model,Scenario,Naive Errors,LTCA Errors,Steps
+DT,Normal,1,1,3
+DT,Attack,2,3,5
+DT,Noise,2,0,2
+RF,Normal,1,1,3
+RF,Attack,3,3,5
+RF,Noise,2,1,2

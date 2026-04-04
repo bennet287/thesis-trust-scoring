@@ -1,0 +1,545 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: transparent; }
+
+.arch-wrap {
+  font-family: 'Arial', sans-serif;
+  width: 100%;
+  background: #0D1B2A;
+  padding: 24px;
+  color: #fff;
+}
+
+.arch-title {
+  text-align: center;
+  margin-bottom: 6px;
+}
+.arch-title h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #E8F4FD;
+  letter-spacing: 1px;
+}
+.arch-title h2 {
+  font-size: 13px;
+  font-weight: 400;
+  color: #7FB3D3;
+  margin-top: 3px;
+}
+.arch-title .meta {
+  font-size: 11px;
+  color: #5A8FA8;
+  margin-top: 2px;
+}
+
+.formula-bar {
+  background: #1A2E42;
+  border: 1px solid #2E5F8A;
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-align: center;
+  margin: 10px 0;
+  font-size: 13px;
+  color: #5DCAA5;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.plane {
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.cloud-plane {
+  background: #0F2236;
+  border: 1.5px dashed #2E6B9E;
+}
+
+.edge-plane {
+  background: #0F261E;
+  border: 1.5px dashed #1A6B4A;
+}
+
+.plane-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plane-label .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cloud-plane .plane-label { color: #5AADE0; }
+.cloud-plane .plane-label .dot { background: #5AADE0; }
+.edge-plane .plane-label { color: #3DBFA0; }
+.edge-plane .plane-label .dot { background: #3DBFA0; }
+
+.row { display: flex; gap: 8px; margin-bottom: 8px; }
+.row.last { margin-bottom: 0; }
+
+.card {
+  border-radius: 8px;
+  padding: 10px 12px;
+  flex: 1;
+}
+
+.card-blue { background: #12344D; border: 1px solid #2E6B9E; }
+.card-purple { background: #1E1A3A; border: 1px solid #4A3A8A; }
+.card-teal { background: #0F2E24; border: 1px solid #1E7A5A; }
+.card-amber { background: #2E1F0A; border: 1px solid #7A5A1A; }
+.card-green { background: #0F2A14; border: 1px solid #2A7A3A; }
+.card-red { background: #2A0F0F; border: 1px solid #7A2A2A; }
+.card-gray { background: #1A1E22; border: 1px solid #3A4A56; }
+.card-pink { background: #2A1020; border: 1px solid #7A3A5A; }
+.card-highlight { background: #1A2E1A; border: 2px solid #3DBFA0; }
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  letter-spacing: 0.5px;
+}
+.card-blue .card-title { color: #7BBFE8; }
+.card-purple .card-title { color: #A99AE8; }
+.card-teal .card-title { color: #5DCAA5; }
+.card-amber .card-title { color: #E8B85A; }
+.card-green .card-title { color: #5AE87A; }
+.card-red .card-title { color: #E87A7A; }
+.card-gray .card-title { color: #A0B0C0; }
+.card-pink .card-title { color: #E87ABF; }
+.card-highlight .card-title { color: #5AE8A0; font-size: 12px; }
+
+.card-item {
+  font-size: 10px;
+  color: #8AA8C0;
+  line-height: 1.7;
+  padding-left: 8px;
+  border-left: 2px solid #2A3A4A;
+  margin-top: 3px;
+}
+.card-blue .card-item { border-color: #2E6B9E; color: #8ABFE8; }
+.card-purple .card-item { border-color: #4A3A8A; color: #A099D8; }
+.card-teal .card-item { border-color: #1E7A5A; color: #7AD8BA; }
+.card-amber .card-item { border-color: #7A5A1A; color: #D8B87A; }
+.card-green .card-item { border-color: #2A7A3A; color: #7AD88A; }
+.card-red .card-item { border-color: #7A2A2A; color: #D88A8A; }
+.card-gray .card-item { border-color: #3A4A56; color: #9AAABB; }
+.card-pink .card-item { border-color: #7A3A5A; color: #D8A0C0; }
+.card-highlight .card-item { border-color: #3DBFA0; color: #A0E8D0; }
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: #5DCAA5;
+  background: #0A1E14;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 3px;
+}
+
+.arrow-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin: 4px 0;
+  font-size: 10px;
+  color: #3A5A7A;
+}
+.arrow-down {
+  text-align: center;
+  font-size: 16px;
+  color: #2E5F8A;
+  margin: 3px 0;
+}
+.arrow-right { color: #2E5F8A; margin: 0 4px; font-size: 14px; }
+
+.sync-bar {
+  background: #12263A;
+  border: 1px solid #2E5F8A;
+  border-radius: 6px;
+  padding: 6px 16px;
+  text-align: center;
+  margin: 6px 0;
+  font-size: 10px;
+  color: #5AADE0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+.sync-item { display: flex; align-items: center; gap: 5px; }
+.sync-arrow-up { color: #5AE87A; font-size: 12px; }
+.sync-arrow-down { color: #E8B85A; font-size: 12px; }
+
+.section-divider {
+  border: none;
+  border-top: 1px dashed #1A3A5A;
+  margin: 6px 0;
+}
+
+.tag {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+.tag-blue { background: #1A4A6A; color: #7BBFE8; }
+.tag-green { background: #1A4A2A; color: #5AE87A; }
+.tag-amber { background: #4A3A0A; color: #E8B85A; }
+.tag-red { background: #4A1A1A; color: #E87A7A; }
+.tag-purple { background: #2A1A5A; color: #A99AE8; }
+.tag-teal { background: #0A3A2A; color: #5DCAA5; }
+
+.policy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 5px;
+  margin-top: 4px;
+}
+.policy-item {
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: center;
+}
+.policy-item .score { font-size: 10px; font-weight: 700; margin-bottom: 2px; }
+.policy-item .action { font-size: 9px; }
+.p-allow { background: #0F2A14; border: 1px solid #2A7A3A; }
+.p-allow .score { color: #5AE87A; }
+.p-allow .action { color: #7AD88A; }
+.p-limit { background: #2A1F0A; border: 1px solid #7A5A1A; }
+.p-limit .score { color: #E8B85A; }
+.p-limit .action { color: #D8B87A; }
+.p-quarantine { background: #2A1A0A; border: 1px solid #8A4A1A; }
+.p-quarantine .score { color: #E8885A; }
+.p-quarantine .action { color: #D8A07A; }
+.p-block { background: #2A0F0F; border: 1px solid #7A2A2A; }
+.p-block .score { color: #E87A7A; }
+.p-block .action { color: #D88A8A; }
+
+.weight-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 10px;
+}
+.weight-table th {
+  background: #1A2E42;
+  color: #7BBFE8;
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid #2E5F8A;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+.weight-table td {
+  padding: 4px 8px;
+  border: 1px solid #1A3A5A;
+  color: #8ABFE8;
+}
+.weight-table tr:nth-child(1) td { background: #0F2A14; color: #7AD88A; }
+.weight-table tr:nth-child(2) td { background: #2A1F0A; color: #D8B87A; }
+
+.footer-bar {
+  background: #0A1620;
+  border: 1px solid #1A3A5A;
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.footer-section { font-size: 10px; }
+.footer-section .label { color: #3A6A8A; font-size: 9px; letter-spacing: 1px; margin-bottom: 3px; }
+.footer-section .value { color: #7BBFE8; }
+.tech-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.tech-pill {
+  background: #1A2E42;
+  border: 1px solid #2E5F8A;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 9px;
+  color: #7BBFE8;
+}
+
+.novelty-box {
+  background: #1A0A2E;
+  border: 1.5px solid #6A4AAA;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+.novelty-box .label { font-size: 9px; color: #8A6ACF; letter-spacing: 1px; margin-bottom: 4px; }
+.novelty-box .text { font-size: 10px; color: #C0A8E8; line-height: 1.6; font-style: italic; }
+
+.delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #0A2A14;
+  border: 1px solid #2A7A3A;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #5AE87A;
+  font-family: 'Courier New', monospace;
+  margin-top: 4px;
+}
+</style>
+
+<div class="arch-wrap">
+
+<div class="arch-title">
+  <h1>LAYERED TRUST CONTROL ARCHITECTURE — LTCA</h1>
+  <h2>Adaptive Continuous Trust Scoring for Zero Trust Edge Networks</h2>
+  <div class="meta">Bennet Allryn B · Student ID 12349954 · MSc AI & Cybersecurity, AAU Klagenfurt · Supervisors: Prof. Dr. Reza Farahani (ITEC) · Prof. Dr. Martin Gebser (AI & CS)</div>
+</div>
+
+<div class="formula-bar">
+  T(x) = w1 · M(x) + w2 · R(x) + w3 · H(x) &nbsp;|&nbsp; Confidence-Gated Adaptive Fusion &nbsp;|&nbsp; T(x) ∈ [0.0 – 1.0]
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     CLOUD PLANE
+     ═══════════════════════════════════════════════ -->
+<div class="cloud-plane plane">
+  <div class="plane-label"><span class="dot"></span>CLOUD / CONTROL PLANE &nbsp;·&nbsp; Offline Intelligence &nbsp;·&nbsp; Periodic sync when connected</div>
+
+  <div class="row">
+    <div class="card card-blue" style="flex:1.1">
+      <div class="card-title">1. DATA PIPELINE</div>
+      <div class="card-item">Source: UNSW-NB15 dataset</div>
+      <div class="card-item">New threat feeds + edge logs</div>
+      <div class="card-item">Cleaning · normalisation · feature selection</div>
+      <div class="card-item">Chi-square: top 20 features from 49</div>
+      <div class="card-item">Min-max scaling → [0, 1]</div>
+      <div class="card-item">Label encoding · train/test split</div>
+    </div>
+    <div class="card card-purple" style="flex:1.2">
+      <div class="card-title">2. MODEL TRAINING + CALIBRATION</div>
+      <div class="card-item">Decision Tree (primary — lightweight)</div>
+      <div class="card-item">Random Forest (comparison model)</div>
+      <div class="card-item">Hyperparameter tuning via 5-fold CV</div>
+      <div class="card-item">P(attack) → M(x) = 1 − P(attack)</div>
+      <div class="card-item">Export → Rust-compatible JSON format</div>
+      <div class="mono">M(x) = 1 − P(attack)</div>
+    </div>
+    <div class="card card-teal" style="flex:1.3">
+      <div class="card-title">3. KNOWLEDGE BASE BUILDER</div>
+      <div class="card-item">Threat pattern centroids (Recon · DoS · Exploit · Worm)</div>
+      <div class="card-item">Device behaviour profiles + baselines</div>
+      <div class="card-item">Policy rules + trust thresholds</div>
+      <div class="card-item">Compute class-mean embeddings</div>
+      <div class="card-item">Build similarity index (FAISS / SQLite)</div>
+      <div class="card-item">4 KB collections: patterns · profiles · events · policies</div>
+    </div>
+    <div class="card card-amber" style="flex:1.1">
+      <div class="card-title">4. PACKAGING + DEPLOYMENT</div>
+      <div class="card-item">Compile Rust → WebAssembly (wasm32)</div>
+      <div class="card-item">opt-level=3 · lto=true · debug=false</div>
+      <div class="card-item">Package KB as lightweight JSON</div>
+      <div class="card-item">Version + sign + checksum</div>
+      <div class="card-item">Push to edge via sync service</div>
+    </div>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-item"><span class="sync-arrow-up">↑</span> Logs · trust summaries · metrics → cloud</div>
+    <div style="color:#2E5F8A">|&nbsp; SYNC WHEN CONNECTED &nbsp;|</div>
+    <div class="sync-item"><span class="sync-arrow-down">↓</span> Model updates · KB updates · policy updates → edge</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     EDGE PLANE
+     ═══════════════════════════════════════════════ -->
+<div class="edge-plane plane">
+  <div class="plane-label"><span class="dot"></span>EDGE DEVICE / PEP NODE &nbsp;·&nbsp; Real-time · On-device · Offline Capable &nbsp;·&nbsp; Wasmtime Runtime · Raspberry Pi 4</div>
+
+  <!-- ROW 1: Input + Preprocessing + Wasm inference -->
+  <div class="row">
+    <div class="card card-gray" style="flex:0.8">
+      <div class="card-title">I. DATA INPUT</div>
+      <div class="card-item">Network packets + flows</div>
+      <div class="card-item">IoT sensors + cameras</div>
+      <div class="card-item">Gateways + actuators</div>
+      <div class="card-item">Session metadata</div>
+      <div class="card-item">Device ID + timestamps</div>
+    </div>
+    <div class="card card-blue" style="flex:1.4">
+      <div class="card-title">II. PREPROCESSING</div>
+      <div class="card-item">Flow builder: packets → session records</div>
+      <div class="card-item">Feature extractor: 20 discriminative features</div>
+      <div class="card-item">Statistical · temporal · content · protocol</div>
+      <div class="card-item">Normaliser: apply training-time min-max params</div>
+      <div class="mono">x ∈ ℝ²⁰ &nbsp;→&nbsp; feature vector</div>
+    </div>
+    <div class="card card-purple" style="flex:1.6">
+      <div class="card-title">III. MODEL TRUST SIGNAL — M(x) &nbsp;<span class="tag tag-purple">WASM MODULE</span></div>
+      <div class="card-item">Wasmtime JIT runtime · sandboxed · fuel-metered</div>
+      <div class="card-item">Load DT or RF Wasm binary · no GPU · no filesystem</div>
+      <div class="card-item">Input: feature vector via Wasm linear memory</div>
+      <div class="card-item">Inference: deterministic · near-native speed</div>
+      <div class="card-item">Output: attack probability → trust signal</div>
+      <div class="delta-badge">Python/Rust/Wasm parity delta = 0.000000</div>
+      <div class="mono">M(x) = 1 − P(attack) &nbsp;e.g. M(x) = 0.72</div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Retrieval + Memory -->
+  <div class="row">
+    <div class="card card-teal" style="flex:1.6">
+      <div class="card-title">IV. RETRIEVAL TRUST SIGNAL — R(x) &nbsp;<span class="tag tag-teal">LOCAL KB LOOKUP</span></div>
+      <div class="card-item">Query builder: convert flow features → retrieval query</div>
+      <div class="card-item">KB search: compare against threat pattern centroids</div>
+      <div class="card-item">Similarity engine: Euclidean distance · cosine · rule match</div>
+      <div class="card-item">Top-K results: closest pattern type identified</div>
+      <div class="card-item">Output: similarity score + matched attack class</div>
+      <div class="card-item">Evidence stored for audit log</div>
+      <div class="mono">R(x) = similarity_score &nbsp;e.g. R(x) = 0.25 · "Reconnaissance"</div>
+    </div>
+    <div class="card card-amber" style="flex:1.4">
+      <div class="card-title">V. BEHAVIOUR MEMORY — H(x) &nbsp;<span class="tag tag-amber">SLIDING WINDOW</span></div>
+      <div class="card-item">Store: last N trust scores per device</div>
+      <div class="card-item">Track: request rate · protocol changes · volume</div>
+      <div class="card-item">Compute: average trust + deviation trend</div>
+      <div class="card-item">Detect: whether device is drifting from baseline</div>
+      <div class="card-item">High drift → lower H(x); stable → higher H(x)</div>
+      <div class="mono">H(x) = history_score &nbsp;e.g. H(x) = 0.63</div>
+    </div>
+  </div>
+
+  <!-- ROW 3: LTCA Fusion — the big card -->
+  <div class="row">
+    <div class="card card-highlight" style="flex:1">
+      <div class="card-title">VI. CONFIDENCE-GATED TRUST FUSION — LTCA CORE CONTRIBUTION &nbsp;<span class="tag tag-green">ADAPTIVE CONTROL</span></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+
+        <div style="background:#0A1E0A;border:1px solid #1A5A2A;border-radius:6px;padding:8px">
+          <div style="font-size:10px;color:#E87A7A;font-weight:700;margin-bottom:4px">✗ &nbsp;NAIVE FUSION — the problem</div>
+          <div class="mono" style="color:#E87A7A;background:#1A0A0A">T = 0.5·M + 0.3·R + 0.2·H &nbsp;(fixed weights)</div>
+          <div style="font-size:10px;color:#D88A8A;margin-top:5px;line-height:1.6">Fixed weights treat all signals equally regardless of model confidence. A noisy retrieval match can override a correct, high-confidence model decision → unsafe override → wrong policy action.</div>
+          <div style="font-size:10px;color:#E87A7A;margin-top:4px">Example: M(x)=0.05 (clearly malicious) + R(x)=0.90 (wrong retrieval) → T=0.325 → QUARANTINE ✗ should be BLOCK</div>
+        </div>
+
+        <div style="background:#0A1A0A;border:1px solid #3DBFA0;border-radius:6px;padding:8px">
+          <div style="font-size:10px;color:#5AE8A0;font-weight:700;margin-bottom:4px">✓ &nbsp;LTCA FUSION — the solution</div>
+          <div style="font-size:10px;color:#A0E8D0;line-height:1.6;margin-bottom:5px">Step 1: Detect confidence regime from M(x)<br>Step 2: Assign dynamic weights<br>Step 3: Compute calibrated T(x)</div>
+          <table class="weight-table">
+            <tr><th>Regime</th><th>w1 M(x)</th><th>w2 R(x)</th><th>w3 H(x)</th></tr>
+            <tr><td>High confidence</td><td>0.80</td><td>0.05</td><td>0.15</td></tr>
+            <tr><td>Uncertain</td><td>0.50</td><td>0.30</td><td>0.20</td></tr>
+          </table>
+          <div class="mono" style="margin-top:5px">T(x) = w1·M(x) + w2·R(x) + w3·H(x)</div>
+          <div style="font-size:10px;color:#5AE87A;margin-top:4px">Same example with LTCA: M(x)=0.05 (high confidence regime) → w1=0.80 → T=0.085 → BLOCK ✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Policy + Explainability + Monitoring -->
+  <div class="row last">
+    <div class="card card-green" style="flex:1.3">
+      <div class="card-title">VII. POLICY DECISION + PEP ENFORCEMENT</div>
+      <div class="policy-grid">
+        <div class="policy-item p-allow">
+          <div class="score">0.80 – 1.00</div>
+          <div class="action">ALLOW<br>Full access<br>Log only</div>
+        </div>
+        <div class="policy-item p-limit">
+          <div class="score">0.50 – 0.79</div>
+          <div class="action">LIMIT<br>Read-only<br>Flag + monitor</div>
+        </div>
+        <div class="policy-item p-quarantine">
+          <div class="score">0.20 – 0.49</div>
+          <div class="action">QUARANTINE<br>Isolate device<br>Alert operators</div>
+        </div>
+        <div class="policy-item p-block">
+          <div class="score">0.00 – 0.19</div>
+          <div class="action">BLOCK<br>Deny all<br>Update ACL</div>
+        </div>
+      </div>
+      <div class="card-item" style="margin-top:6px">PEP: update firewall · restrict subnet · notify services</div>
+    </div>
+    <div class="card card-gray" style="flex:1.1">
+      <div class="card-title">VIII. EXPLAINABILITY + AUDIT</div>
+      <div class="card-item">Decision reason in natural language</div>
+      <div class="card-item">"87% similarity with Reconnaissance pattern"</div>
+      <div class="card-item">"Trust dropped from 0.85 to 0.42"</div>
+      <div class="card-item">"Request rate 3× above baseline"</div>
+      <div class="card-item">Scores logged: M(x) · R(x) · H(x) · T(x)</div>
+      <div class="card-item">Regime + weights used stored per decision</div>
+      <div class="card-item">Retrieved evidence · action taken · timestamp</div>
+    </div>
+    <div class="card card-gray" style="flex:1">
+      <div class="card-title">IX. MONITORING + SYNC</div>
+      <div class="card-item">Metrics: latency · memory · CPU · Wasm fuel</div>
+      <div class="card-item">KB lookup time · binary size · trust trend</div>
+      <div class="card-item">Online: upload logs · download updates</div>
+      <div class="card-item">Offline: queue locally · sync on reconnect</div>
+      <div class="card-item">Rollback-capable versioned updates</div>
+    </div>
+    <div class="card card-teal" style="flex:1.1">
+      <div class="card-title">X. LOCAL KNOWLEDGE BASE</div>
+      <div class="card-item"><span style="color:#5DCAA5">A.</span> Threat patterns · embeddings · severity</div>
+      <div class="card-item"><span style="color:#5DCAA5">B.</span> Device profiles · baselines · last seen</div>
+      <div class="card-item"><span style="color:#5DCAA5">C.</span> Recent events · alerts · trust history</div>
+      <div class="card-item"><span style="color:#5DCAA5">D.</span> Policy rules · thresholds · exceptions</div>
+      <div class="card-item" style="margin-top:4px">Enables full offline operation</div>
+      <span class="tag tag-teal">SQLite · JSON · FAISS</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- NOVELTY -->
+<div class="novelty-box">
+  <div class="label">CORE NOVELTY — THESIS DEFENCE STATEMENT</div>
+  <div class="text">The LTCA extends edge-based intrusion detection into a multi-signal trust scoring system where decisions are regulated through a confidence-aware control mechanism. Rather than combining model output, retrieval context, and behavioural history with fixed weights, LTCA detects the model confidence regime and dynamically adjusts signal contributions to prevent contextual signals from overriding high-confidence correct decisions — transforming a static fusion pipeline into an adaptive decision-making framework.</div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer-bar">
+  <div class="footer-section">
+    <div class="label">TECH STACK</div>
+    <div class="tech-pills">
+      <span class="tech-pill">Rust</span>
+      <span class="tech-pill">WebAssembly</span>
+      <span class="tech-pill">Wasmtime</span>
+      <span class="tech-pill">Python</span>
+      <span class="tech-pill">UNSW-NB15</span>
+      <span class="tech-pill">FAISS</span>
+      <span class="tech-pill">SQLite</span>
+      <span class="tech-pill">Raspberry Pi 4</span>
+    </div>
+  </div>
+  <div class="footer-section" style="text-align:center">
+    <div class="label">PARITY PROOF</div>
+    <div class="delta-badge">Python → Rust → Wasm delta = 0.000000</div>
+  </div>
+  <div class="footer-section">
+    <div class="label">EVALUATION METRICS</div>
+    <div class="value" style="font-size:10px;color:#7BBFE8;line-height:1.7">
+      Security: F1 · Precision · Recall · False +ve/-ve · Trust stability<br>
+      System: Latency · Memory · CPU · Wasm fuel · KB size · Binary size
+    </div>
+  </div>
+</div>
+
+</div>
