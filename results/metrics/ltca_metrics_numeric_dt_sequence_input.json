@@ -1,0 +1,14 @@
+{
+  "model_tag": "numeric_dt",
+  "scenario": "sequence_input",
+  "steps": 5,
+  "policy": {
+    "allow_threshold": 0.8,
+    "limit_threshold": 0.5,
+    "block_threshold": 0.2,
+    "mild_trend_threshold": -0.05,
+    "strong_trend_threshold": -0.1,
+    "mild_penalty": 0.1,
+    "strong_penalty": 0.2
+  }
+}

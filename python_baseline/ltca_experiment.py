@@ -215,9 +215,22 @@ def load_pipeline(pipeline_path: Path):
     return joblib.load(pipeline_path)
 
 
-def model_trust(pipeline, x: np.ndarray):
+def _as_model_input(pipeline, x: np.ndarray):
     x2 = x.reshape(1, -1)
-    attack_prob = float(pipeline.predict_proba(x2)[0][1])
+    feature_names = getattr(pipeline, "feature_names_in_", None)
+    if feature_names is not None:
+        if len(feature_names) != x2.shape[1]:
+            raise ValueError(
+                f"Feature length mismatch: pipeline expects {len(feature_names)} features, "
+                f"but sample has {x2.shape[1]}."
+            )
+        return pd.DataFrame(x2, columns=list(feature_names))
+    return x2
+
+
+def model_trust(pipeline, x: np.ndarray):
+    model_input = _as_model_input(pipeline, x)
+    attack_prob = float(pipeline.predict_proba(model_input)[0][1])
     M = float(1.0 - attack_prob)
     return attack_prob, M
 

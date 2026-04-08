@@ -1,0 +1,18 @@
+{
+  "model_tag": "rf",
+  "scenario": "normal",
+  "steps": 3,
+  "policy": {
+    "allow_threshold": 0.8,
+    "limit_threshold": 0.5,
+    "block_threshold": 0.2,
+    "mild_trend_threshold": -0.04,
+    "strong_trend_threshold": -0.1,
+    "mild_penalty": 0.08,
+    "strong_penalty": 0.16
+  },
+  "model_errors": 1,
+  "naive_errors": 1,
+  "ltca_errors": 1,
+  "total_steps": 3
+}

@@ -1,0 +1,12 @@
+{
+  "single_mean_ms": 1.1988850004127016,
+  "single_median_ms": 1.1618999997153878,
+  "single_max_ms": 1.9166000056429766,
+  "repeat_count": 1000,
+  "repeat_total_ms": 1124.182200001087,
+  "repeat_avg_ms": 1.124182200001087,
+  "sequence_batch_size": 5,
+  "sequence_repeat_count": 1000,
+  "sequence_total_ms": 1113.964099997247,
+  "sequence_avg_ms": 1.113964099997247
+}
