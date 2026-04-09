@@ -1,0 +1,53 @@
+{
+  "model": "dt",
+  "evaluated_candidates": 3840,
+  "score": 15.0,
+  "fusion": {
+    "high_confidence": {
+      "w_m": 0.75,
+      "w_r": 0.03,
+      "w_h": 0.22
+    },
+    "medium_confidence": {
+      "w_m": 0.55,
+      "w_r": 0.1,
+      "w_h": 0.35
+    },
+    "low_confidence": {
+      "w_m": 0.4,
+      "w_r": 0.2,
+      "w_h": 0.4
+    }
+  },
+  "thresholds": {
+    "allow": 0.85,
+    "limit": 0.65,
+    "quarantine": 0.4
+  },
+  "confidence_gates": {
+    "high": 0.9,
+    "medium": 0.75,
+    "low_center_min": 0.25,
+    "high_center_max": 0.75
+  },
+  "per_scenario": {
+    "normal": {
+      "total_steps": 3,
+      "errors": 0,
+      "under_enforcement": 0,
+      "over_enforcement": 0
+    },
+    "attack": {
+      "total_steps": 5,
+      "errors": 3,
+      "under_enforcement": 0,
+      "over_enforcement": 6
+    },
+    "noise": {
+      "total_steps": 2,
+      "errors": 0,
+      "under_enforcement": 0,
+      "over_enforcement": 0
+    }
+  }
+}
