@@ -9,4 +9,5 @@ __pycache__/
 cloud/keys/demo_ed25519_private.pem
 sync_state/
 results/logs/
+results/logs/*.jsonl
 *.tar.gz
