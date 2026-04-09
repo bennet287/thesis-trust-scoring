@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1480" viewBox="0 0 2400 1480">
+<defs>
+  <style>
+    .title  { font: 700 32px Georgia, serif; fill:#f8fafc; letter-spacing:0.4px; }
+    .sub    { font: italic 400 15px Georgia, serif; fill:#94a3b8; }
+    .zone   { font: 700 13px Georgia, serif; letter-spacing:0.8px; }
+    .boxh   { font: 700 14px Georgia, serif; fill:#ffffff; }
+    .txt    { font: 400 13px Georgia, serif; fill:#1e293b; }
+    .small  { font: 400 12.5px Georgia, serif; fill:#334155; }
+    .tag    { font: 700 10px Georgia, serif; letter-spacing:0.9px; }
+    .rowlbl { font: 700 11px Georgia, serif; letter-spacing:0.8px; fill:#475569; }
+    .formula{ font: 700 17px "Courier New", monospace; fill:#7c2d12; }
+    .thesish{ font: 700 15px Georgia, serif; fill:#f8fafc; }
+    .thesis { font: 400 13px Georgia, serif; fill:#1e293b; }
+    .footer { font: 400 11px Georgia, serif; fill:#94a3b8; letter-spacing:0.5px; }
+  </style>
+  <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+    <stop offset="0%" stop-color="#f8fafc"/>
+    <stop offset="100%" stop-color="#eef2f7"/>
+  </linearGradient>
+  <filter id="card-shadow" x="-6%" y="-6%" width="112%" height="112%">
+    <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.09"/>
+  </filter>
+  <filter id="zone-shadow" x="-1%" y="-1%" width="102%" height="102%">
+    <feDropShadow dx="0" dy="5" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.08"/>
+  </filter>
+  <marker id="arrBlue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+  </marker>
+  <marker id="arrPurple" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="#4f46e5"/>
+  </marker>
+  <marker id="arrGreen" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+  </marker>
+  <marker id="arrDash" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+    <path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/>
+  </marker>
+</defs>
+<rect width="2400" height="1480" fill="url(#bg)"/>
+<rect x="40" y="18" width="2320" height="76" rx="14" fill="#0f172a"/>
+<text x="1200" y="62" class="title" text-anchor="middle">LAYERED TRUST CONTROL ARCHITECTURE  (LTCA)  v1.2.0</text>
+<text x="1200" y="85" class="sub" text-anchor="middle">Local-first Zero Trust edge decisioning · Secure cloud artifact synchronisation · Runtime KB/policy reload · Calibrated trust control</text>
+<rect x="40" y="108" width="2320" height="284" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" filter="url(#zone-shadow)"/>
+<text x="1200" y="138" class="zone" text-anchor="middle" fill="#1e3a8a">☁  CLOUD / CONTROL PLANE  —  offline preparation · calibration · secure packaging · versioned artifact distribution</text>
+<rect x="40" y="162" width="451" height="210" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="40" y="162" width="451" height="36" rx="12" fill="#1d4ed8"/>
+<rect x="40" y="180" width="451" height="18" fill="#1d4ed8"/>
+<text x="265" y="186" class="boxh" text-anchor="middle">1.  Training &amp; Threat Inputs</text>
+<text x="58" y="224" class="txt">• UNSW-NB15 features and labels</text>
+<text x="58" y="248" class="txt">• Threat categories and profile priors</text>
+<text x="58" y="272" class="txt">• Device / deployment metadata</text>
+<text x="58" y="296" class="txt">• Versioned experiment inputs</text>
+<text x="58" y="320" class="txt">• Reproducible pipeline entry point</text>
+<text x="58" y="358" class="tag">INPUT</text>
+<line x1="491" y1="267" x2="503" y2="267" stroke="#2563eb" stroke-width="2.8" marker-end="url(#arrBlue)"/>
+<rect x="507" y="162" width="451" height="210" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="507" y="162" width="451" height="36" rx="12" fill="#1d4ed8"/>
+<rect x="507" y="180" width="451" height="18" fill="#1d4ed8"/>
+<text x="732" y="186" class="boxh" text-anchor="middle">2.  Model / KB / Policy Build</text>
+<text x="525" y="224" class="txt">• Train DT/RF baseline models</text>
+<text x="525" y="248" class="txt">• Build centroid retrieval_kb.json</text>
+<text x="525" y="272" class="txt">• Generate policy.json from best config</text>
+<text x="525" y="296" class="txt">• Preserve reproducible artifacts</text>
+<text x="525" y="320" class="txt">• Version-stamped output bundle</text>
+<text x="525" y="358" class="tag">BUILD</text>
+<line x1="958" y1="267" x2="970" y2="267" stroke="#2563eb" stroke-width="2.8" marker-end="url(#arrBlue)"/>
+<rect x="974" y="162" width="451" height="210" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="974" y="162" width="451" height="36" rx="12" fill="#1d4ed8"/>
+<rect x="974" y="180" width="451" height="18" fill="#1d4ed8"/>
+<text x="1199" y="186" class="boxh" text-anchor="middle">3.  Calibration &amp; Freezing</text>
+<text x="992" y="224" class="txt">• Tune fusion weights on calibration split</text>
+<text x="992" y="248" class="txt">• Tune thresholds from ROC targets</text>
+<text x="992" y="272" class="txt">• Freeze benchmark scenarios</text>
+<text x="992" y="296" class="txt">• Export best-calibration results</text>
+<text x="992" y="320" class="txt">• Externalise weights to policy.json</text>
+<text x="992" y="358" class="tag">CALIBRATE</text>
+<line x1="1425" y1="267" x2="1437" y2="267" stroke="#2563eb" stroke-width="2.8" marker-end="url(#arrBlue)"/>
+<rect x="1441" y="162" width="451" height="210" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1441" y="162" width="451" height="36" rx="12" fill="#1d4ed8"/>
+<rect x="1441" y="180" width="451" height="18" fill="#1d4ed8"/>
+<text x="1666" y="186" class="boxh" text-anchor="middle">4.  Secure Update Packaging</text>
+<text x="1459" y="224" class="txt">• Bundle model + kb + policy → tar.gz</text>
+<text x="1459" y="248" class="txt">• Compute SHA-256 digest</text>
+<text x="1459" y="272" class="txt">• Sign package with Ed25519 private key</text>
+<text x="1459" y="296" class="txt">• Write manifest_&lt;version&gt;.json</text>
+<text x="1459" y="320" class="txt">• Immutable, verifiable delivery unit</text>
+<text x="1459" y="358" class="tag">PACKAGE</text>
+<line x1="1892" y1="267" x2="1904" y2="267" stroke="#2563eb" stroke-width="2.8" marker-end="url(#arrBlue)"/>
+<rect x="1908" y="162" width="452" height="210" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1908" y="162" width="452" height="36" rx="12" fill="#1d4ed8"/>
+<rect x="1908" y="180" width="452" height="18" fill="#1d4ed8"/>
+<text x="2134" y="186" class="boxh" text-anchor="middle">5.  Control Server / Registry</text>
+<text x="1926" y="224" class="txt">• Expose /check · /manifest · /download</text>
+<text x="1926" y="248" class="txt">• Maintain monotonic artifact versions</text>
+<text x="1926" y="272" class="txt">• Provide hash, size, signature metadata</text>
+<text x="1926" y="296" class="txt">• Collect update and demo evidence logs</text>
+<text x="1926" y="320" class="txt">• Single source of truth for edge nodes</text>
+<text x="1926" y="358" class="tag">REGISTRY</text>
+<line x1="1200" y1="392" x2="1200" y2="434" stroke="#1d4ed8" stroke-width="3.5" stroke-dasharray="9 5" marker-end="url(#arrDash)"/>
+<rect x="1010" y="402" width="380" height="22" rx="11" fill="#dbeafe"/>
+<text x="1200" y="418" font-family="Georgia,serif" font-weight="700" font-size="11" fill="#1e40af" text-anchor="middle" letter-spacing="0.5">HTTPS · signed artifact manifest · Ed25519 verified</text>
+<rect x="40" y="444" width="2320" height="788" rx="16" fill="#f5f3ff" stroke="#a78bfa" stroke-width="2" filter="url(#zone-shadow)"/>
+<text x="1200" y="474" class="zone" text-anchor="middle" fill="#3b0764">⬡  EDGE DEVICE / PEP NODE  —  offline-capable inference · verified artifact activation · runtime trust control</text>
+<text x="40" y="494" class="rowlbl">ARTIFACT SYNCHRONISATION &amp; ACTIVATION  ▶</text>
+<rect x="40" y="514" width="451" height="210" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="40" y="514" width="451" height="36" rx="12" fill="#4338ca"/>
+<rect x="40" y="532" width="451" height="18" fill="#4338ca"/>
+<text x="265" y="538" class="boxh" text-anchor="middle">6.  Sync Client</text>
+<text x="58" y="576" class="txt">• Periodic /check polling (configurable)</text>
+<text x="58" y="600" class="txt">• Download manifest and package</text>
+<text x="58" y="624" class="txt">• Reject non-monotonic versions</text>
+<text x="58" y="648" class="txt">• Writes explicit evidence lines to log</text>
+<text x="58" y="710" class="tag">POLL / FETCH</text>
+<line x1="491" y1="619" x2="503" y2="619" stroke="#4f46e5" stroke-width="2.8" marker-end="url(#arrPurple)"/>
+<rect x="507" y="514" width="451" height="210" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="507" y="514" width="451" height="36" rx="12" fill="#4338ca"/>
+<rect x="507" y="532" width="451" height="18" fill="#4338ca"/>
+<text x="732" y="538" class="boxh" text-anchor="middle">7.  Verify &amp; Stage</text>
+<text x="525" y="576" class="txt">• Validate package size</text>
+<text x="525" y="600" class="txt">• Verify SHA-256 hash</text>
+<text x="525" y="624" class="txt">• Verify Ed25519 signature</text>
+<text x="525" y="648" class="txt">• Unpack into staging area</text>
+<text x="525" y="710" class="tag">VERIFY</text>
+<line x1="958" y1="619" x2="970" y2="619" stroke="#4f46e5" stroke-width="2.8" marker-end="url(#arrPurple)"/>
+<rect x="974" y="514" width="451" height="210" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="974" y="514" width="451" height="36" rx="12" fill="#4338ca"/>
+<rect x="974" y="532" width="451" height="18" fill="#4338ca"/>
+<text x="1199" y="538" class="boxh" text-anchor="middle">8.  Atomic Activate / Rollback</text>
+<text x="992" y="576" class="txt">• Backup current active artifacts</text>
+<text x="992" y="600" class="txt">• Promote verified files atomically</text>
+<text x="992" y="624" class="txt">• Restore previous version on failure</text>
+<text x="992" y="648" class="txt">• Emit reload trigger signal</text>
+<text x="992" y="710" class="tag">ATOMIC SWAP</text>
+<line x1="1425" y1="619" x2="1437" y2="619" stroke="#4f46e5" stroke-width="2.8" marker-end="url(#arrPurple)"/>
+<rect x="1441" y="514" width="451" height="210" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1441" y="514" width="451" height="36" rx="12" fill="#4338ca"/>
+<rect x="1441" y="532" width="451" height="18" fill="#4338ca"/>
+<text x="1666" y="538" class="boxh" text-anchor="middle">9.  Active Artifact Store</text>
+<text x="1459" y="576" class="txt">• active/kb.json</text>
+<text x="1459" y="600" class="txt">• active/policy.json</text>
+<text x="1459" y="624" class="txt">• active/model.json  (artifact-compatible)</text>
+<text x="1459" y="648" class="txt">• current_version.json metadata</text>
+<text x="1459" y="710" class="tag">STORE</text>
+<line x1="1892" y1="619" x2="1904" y2="619" stroke="#4f46e5" stroke-width="2.8" marker-end="url(#arrPurple)"/>
+<rect x="1908" y="514" width="452" height="210" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1908" y="514" width="452" height="36" rx="12" fill="#4338ca"/>
+<rect x="1908" y="532" width="452" height="18" fill="#4338ca"/>
+<text x="2134" y="538" class="boxh" text-anchor="middle">10.  Host Reload Hook</text>
+<text x="1926" y="576" class="txt">• Poll .reload_trigger deterministically</text>
+<text x="1926" y="600" class="txt">• Reload KB and policy from sync state</text>
+<text x="1926" y="624" class="txt">• Keep Wasm model path stable</text>
+<text x="1926" y="648" class="txt">• Log proof: Reloaded KB and policy</text>
+<text x="1926" y="710" class="tag">RELOAD HOOK</text>
+<text x="40" y="752" class="rowlbl">INFERENCE &amp; TRUST SCORING PIPELINE  ▶</text>
+<rect x="40" y="772" width="451" height="210" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="40" y="772" width="451" height="36" rx="12" fill="#1e40af"/>
+<rect x="40" y="790" width="451" height="18" fill="#1e40af"/>
+<text x="265" y="796" class="boxh" text-anchor="middle">11.  Input &amp; Feature Path</text>
+<text x="58" y="834" class="txt">• Incoming session / flow record</text>
+<text x="58" y="858" class="txt">• 39-feature normalised numeric vector</text>
+<text x="58" y="882" class="txt">• Prototype: pre-extracted features</text>
+<text x="58" y="906" class="txt">• Real-time edge-local processing</text>
+<text x="58" y="968" class="tag">SESSION INPUT</text>
+<line x1="491" y1="877" x2="503" y2="877" stroke="#2563eb" stroke-width="2.8" marker-end="url(#arrBlue)"/>
+<rect x="507" y="772" width="451" height="210" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="507" y="772" width="451" height="36" rx="12" fill="#1e40af"/>
+<rect x="507" y="790" width="451" height="18" fill="#1e40af"/>
+<text x="732" y="796" class="boxh" text-anchor="middle">12.  Base Model Trust  M(x)</text>
+<text x="525" y="834" class="txt">• Wasm-hosted DT inference path</text>
+<text x="525" y="858" class="txt">• Compute P(attack | x)</text>
+<text x="525" y="882" class="txt">• Trust transform  M(x) = 1 − P(attack)</text>
+<text x="525" y="906" class="txt">• Model path kept stable for runtime safety</text>
+<text x="525" y="968" class="tag">MODEL SCORE</text>
+<line x1="958" y1="877" x2="970" y2="877" stroke="#2563eb" stroke-width="2.8" marker-end="url(#arrBlue)"/>
+<rect x="974" y="772" width="451" height="210" rx="12" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="974" y="772" width="451" height="36" rx="12" fill="#5b21b6"/>
+<rect x="974" y="790" width="451" height="18" fill="#5b21b6"/>
+<text x="1199" y="796" class="boxh" text-anchor="middle">13.  Retrieval Context  R(x)</text>
+<text x="992" y="834" class="txt">• Load active retrieval_kb.json</text>
+<text x="992" y="858" class="txt">• Similarity against centroid profiles</text>
+<text x="992" y="882" class="txt">• Best match returns contextual prior</text>
+<text x="992" y="906" class="txt">• Profile + score logged (explainability)</text>
+<text x="992" y="968" class="tag">KB RETRIEVAL</text>
+<line x1="1425" y1="877" x2="1437" y2="877" stroke="#7c3aed" stroke-width="2.8" marker-end="url(#arrPurple)"/>
+<rect x="1441" y="772" width="451" height="210" rx="12" fill="#fff7ed" stroke="#d97706" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1441" y="772" width="451" height="36" rx="12" fill="#b45309"/>
+<rect x="1441" y="790" width="451" height="18" fill="#b45309"/>
+<text x="1666" y="796" class="boxh" text-anchor="middle">14.  Behavioural Memory + LTCA Fusion</text>
+<text x="1459" y="834" class="txt">• Sliding trust history  H(x)</text>
+<text x="1459" y="858" class="txt">• Fuse  M(x),  R(x),  H(x)</text>
+<text x="1459" y="882" class="txt">• Use calibrated policy weights</text>
+<text x="1459" y="906" class="txt">• Output T_fused(x) and T_final(x)</text>
+<text x="1459" y="968" class="tag">FUSION</text>
+<line x1="1892" y1="877" x2="1904" y2="877" stroke="#059669" stroke-width="2.8" marker-end="url(#arrGreen)"/>
+<rect x="1908" y="772" width="452" height="210" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1908" y="772" width="452" height="36" rx="12" fill="#065f46"/>
+<rect x="1908" y="790" width="452" height="18" fill="#065f46"/>
+<text x="2134" y="796" class="boxh" text-anchor="middle">15.  Policy Mapping &amp; Enforcement</text>
+<text x="1926" y="834" class="txt">• Thresholds loaded from policy.json</text>
+<text x="1926" y="858" class="txt">• ALLOW / LIMIT / QUARANTINE / BLOCK</text>
+<text x="1926" y="882" class="txt">• PEP enforces final access decision</text>
+<text x="1926" y="906" class="txt">• Behaviour changes after policy reload</text>
+<text x="1926" y="968" class="tag">ENFORCEMENT</text>
+<rect x="670" y="1002" width="1060" height="56" rx="14" fill="#fef9c3" stroke="#d97706" stroke-width="2"/>
+<text x="1200" y="1038" class="formula" text-anchor="middle">T_final(x)  =  policy_control(  calibrated_fusion( M(x),  R(x),  H(x) )  )</text>
+<text x="40" y="1082" class="rowlbl">OBSERVABILITY &amp; THESIS SCOPE  ▶</text>
+<rect x="40" y="1102" width="762" height="110" rx="12" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="40" y="1102" width="762" height="36" rx="12" fill="#0369a1"/>
+<rect x="40" y="1120" width="762" height="18" fill="#0369a1"/>
+<text x="421" y="1126" class="boxh" text-anchor="middle">16.  Logging &amp; Evidence</text>
+<text x="58" y="1160" class="small">• Record update checks, verification, reload, and trust traces</text>
+<text x="58" y="1182" class="small">• Export JSON/CSV logs for thesis figures and reproducible evaluation</text>
+<rect x="819" y="1102" width="762" height="110" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="819" y="1102" width="762" height="36" rx="12" fill="#15803d"/>
+<rect x="819" y="1120" width="762" height="18" fill="#15803d"/>
+<text x="1200" y="1126" class="boxh" text-anchor="middle">17.  Evaluation Harness</text>
+<text x="837" y="1160" class="small">• Compare static policy vs calibrated policy; demonstrate post-reload behaviour change</text>
+<text x="837" y="1182" class="small">• Measure package size, verification time, and reload latency</text>
+<rect x="1598" y="1102" width="762" height="110" rx="12" fill="#f8fafc" stroke="#64748b" stroke-width="1.5" filter="url(#card-shadow)"/>
+<rect x="1598" y="1102" width="762" height="36" rx="12" fill="#334155"/>
+<rect x="1598" y="1120" width="762" height="18" fill="#334155"/>
+<text x="1979" y="1126" class="boxh" text-anchor="middle">18.  Security Posture &amp; Scope</text>
+<text x="1616" y="1160" class="small">• Mitigates tampered / corrupted / broken updates; preserves offline edge decisioning</text>
+<text x="1616" y="1182" class="small">• Full runtime Wasm model hot-swap is explicitly out of scope (future work)</text>
+<rect x="40" y="1248" width="2320" height="198" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#zone-shadow)"/>
+<rect x="40" y="1248" width="2320" height="36" rx="14" fill="#0f172a"/>
+<rect x="40" y="1266" width="2320" height="18" fill="#0f172a"/>
+<text x="1200" y="1272" class="thesish" text-anchor="middle">Thesis Interpretation</text>
+<rect x="62" y="1293" width="7" height="7" rx="3.5" fill="#2563eb"/>
+<text x="78" y="1301" class="thesis">LTCA v1.2.0 separates the decision plane from the update plane: inference remains fully local, while adaptation is delivered through verified cloud artifacts.</text>
+<rect x="62" y="1329" width="7" height="7" rx="3.5" fill="#7c3aed"/>
+<text x="78" y="1337" class="thesis">Runtime activation is implemented for policy and retrieval knowledge, enabling controlled behavioural change without destabilising the Wasm inference path.</text>
+<rect x="62" y="1365" width="7" height="7" rx="3.5" fill="#ea580c"/>
+<text x="78" y="1373" class="thesis">Calibration improves decision control by externalising fusion weights and thresholds into policy.json rather than hardcoding them inside the runner.</text>
+<rect x="62" y="1401" width="7" height="7" rx="3.5" fill="#059669"/>
+<text x="78" y="1409" class="thesis">The implemented system should be claimed as a secure, reproducible, cloud-assisted edge trust control pipeline — not as online learning or unrestricted live model evolution.</text>
+<line x1="40" y1="1462" x2="2360" y2="1462" stroke="#e2e8f0" stroke-width="1"/>
+<text x="1200" y="1480" class="footer" text-anchor="middle">AAU · MSc Artificial Intelligence and Cybersecurity · Supervisors: Dr. Reza Farahani · Prof. Dr. Martin Gebser · Universität Klagenfurt</text>
+<text x="1200" y="1496" class="footer" text-anchor="middle">LTCA Architecture Diagram · v1.2.0</text>
+</svg>
