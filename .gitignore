@@ -6,3 +6,7 @@ __pycache__/
 *.pyd
 .env
 .vscode/
+cloud/keys/demo_ed25519_private.pem
+sync_state/
+results/logs/
+*.tar.gz

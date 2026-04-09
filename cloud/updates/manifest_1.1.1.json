@@ -1,0 +1,12 @@
+{
+  "version": "1.1.1",
+  "hash": "f9ac6cc32a75deeba8b5e46af7e4c2307372954ffc801e120e3b9c99bc8bcaea",
+  "size": 6634,
+  "signature": "a5d60ce148c497d6794651d5fd957374112d4df87f6f5b78d9a37b700682f945bccfd82ef19d0f00664dccadcc538c67845ecd1367bc5d31f153ffba50c2010e",
+  "files": [
+    "model.json",
+    "kb.json",
+    "policy.json"
+  ],
+  "created_at": null
+}

@@ -1,0 +1,30 @@
+{
+    "fusion":  {
+                   "high_confidence":  {
+                                           "w_m":  0.75,
+                                           "w_r":  0.03,
+                                           "w_h":  0.22
+                                       },
+                   "medium_confidence":  {
+                                             "w_m":  0.55,
+                                             "w_r":  0.10,
+                                             "w_h":  0.35
+                                         },
+                   "low_confidence":  {
+                                          "w_m":  0.40,
+                                          "w_r":  0.20,
+                                          "w_h":  0.40
+                                      }
+               },
+    "confidence_gates":  {
+                             "high":  0.90,
+                             "medium":  0.75,
+                             "low_center_min":  0.25,
+                             "high_center_max":  0.75
+                         },
+    "thresholds":  {
+                       "allow":  0.80,
+                       "limit":  0.55,
+                       "quarantine":  0.30
+                   }
+}
