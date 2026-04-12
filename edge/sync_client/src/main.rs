@@ -1,4 +1,5 @@
 mod api;
+mod mode;
 mod swap;
 mod types;
 mod verify;
@@ -11,6 +12,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::api::{check_for_update, download_manifest, download_package_bytes};
+use crate::mode::SyncMode;
 use crate::swap::{apply_update_atomically, load_local_version, rollback};
 use crate::types::ClientConfig;
 use crate::verify::{verify_hash, verify_signature, verify_size};
@@ -23,6 +25,10 @@ fn read_config() -> ClientConfig {
             .ok()
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(60),
+        max_staleness_hours: env::var("SYNC_MAX_STALENESS_HOURS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(24),
         public_key_hex: env::var("SYNC_PUBLIC_KEY_HEX").unwrap_or_default(),
         work_dir: env::var("SYNC_WORK_DIR").unwrap_or_else(|_| "../sync_state".into()),
     }
@@ -33,6 +39,11 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     let cfg = read_config();
+    let sync_mode = SyncMode::from_env();
+    info!(
+        "sync mode: {:?}, max staleness hours: {}",
+        sync_mode, cfg.max_staleness_hours
+    );
 
     if cfg.public_key_hex.is_empty() {
         anyhow::bail!("SYNC_PUBLIC_KEY_HEX is required");
@@ -43,11 +54,20 @@ async fn main() -> Result<()> {
         .build()
         .context("failed to build HTTP client")?;
 
-    loop {
-        if let Err(e) = run_once(&client, &cfg).await {
-            error!("sync loop error: {e:#}");
+    match sync_mode {
+        SyncMode::Periodic => loop {
+            if let Err(e) = run_once(&client, &cfg).await {
+                error!("sync loop error: {e:#}");
+            }
+            sleep(Duration::from_secs(cfg.poll_seconds)).await;
+        },
+        SyncMode::Opportunistic => {
+            if let Err(e) = run_once(&client, &cfg).await {
+                error!("opportunistic sync error: {e:#}");
+            }
+            info!("opportunistic sync completed; exiting");
+            Ok(())
         }
-        sleep(Duration::from_secs(cfg.poll_seconds)).await;
     }
 }
 

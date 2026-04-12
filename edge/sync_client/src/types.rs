@@ -30,6 +30,7 @@ pub struct ClientConfig {
     pub base_url: String,
     pub device_id: String,
     pub poll_seconds: u64,
+    pub max_staleness_hours: u64,
     pub public_key_hex: String,
     pub work_dir: String,
 }

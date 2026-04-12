@@ -39,27 +39,39 @@ pub fn apply_update_atomically(package_bytes: &[u8], version: &str, work_dir: &s
     unpack_tar_gz(package_bytes, &extract_dir)?;
 
     let model = extract_dir.join("model.json");
-    let kb = extract_dir.join("kb.json");
+    let kb_json = extract_dir.join("kb.json");
+    let kb_cbor = extract_dir.join("kb.cbor");
     let policy = extract_dir.join("policy.json");
 
-    if !model.exists() || !kb.exists() || !policy.exists() {
+    if !model.exists() || !policy.exists() || (!kb_json.exists() && !kb_cbor.exists()) {
         return Err(anyhow!("package missing required files"));
     }
 
     let candidate_version_dir = versions_dir.join(version);
     ensure_dir(&candidate_version_dir)?;
     fs::copy(&model, candidate_version_dir.join("model.json"))?;
-    fs::copy(&kb, candidate_version_dir.join("kb.json"))?;
+    if kb_json.exists() {
+        fs::copy(&kb_json, candidate_version_dir.join("kb.json"))?;
+    }
+    if kb_cbor.exists() {
+        fs::copy(&kb_cbor, candidate_version_dir.join("kb.cbor"))?;
+    }
     fs::copy(&policy, candidate_version_dir.join("policy.json"))?;
 
     // Backup current active set
     copy_if_exists(&active_dir.join("model.json"), &backup_dir.join("model.json"))?;
     copy_if_exists(&active_dir.join("kb.json"), &backup_dir.join("kb.json"))?;
+    copy_if_exists(&active_dir.join("kb.cbor"), &backup_dir.join("kb.cbor"))?;
     copy_if_exists(&active_dir.join("policy.json"), &backup_dir.join("policy.json"))?;
 
     // Atomic-ish replacement by writing temp then rename
     replace_file_atomic(&model, &active_dir.join("model.json"))?;
-    replace_file_atomic(&kb, &active_dir.join("kb.json"))?;
+    if kb_json.exists() {
+        replace_file_atomic(&kb_json, &active_dir.join("kb.json"))?;
+    }
+    if kb_cbor.exists() {
+        replace_file_atomic(&kb_cbor, &active_dir.join("kb.cbor"))?;
+    }
     replace_file_atomic(&policy, &active_dir.join("policy.json"))?;
 
     fs::write(
@@ -78,7 +90,7 @@ pub fn rollback(work_dir: &str) -> Result<()> {
     let active_dir = root.join("active");
     let backup_dir = root.join("backup");
 
-    for name in ["model.json", "kb.json", "policy.json"] {
+    for name in ["model.json", "kb.json", "kb.cbor", "policy.json"] {
         let src = backup_dir.join(name);
         let dst = active_dir.join(name);
         if src.exists() {
