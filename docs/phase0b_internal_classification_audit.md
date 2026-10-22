@@ -27,6 +27,19 @@ All three selected decision thresholds were approximately 0.50. The internal-aud
 
 In this **one exploratory split**, fusion did not improve F1 or total classification errors. This is *not proof that fusion never helps*: these settings exclude temporal history, use heuristic profile trusts, and were not tested on independent environments or time/device-held-out data.
 
+## Sensitivity check across five random seeds
+The same procedure (re-fitting the classifier, centroids and per-method calibration thresholds each time) was repeated with seeds 7, 17, 42, 73 and 123, using the same public source file:
+
+| Seed | Model F1 | Naive F1 | Adaptive F1 | Adaptive - Model |
+| --- | ---: | ---: | ---: | ---: |
+| 7 | 0.94760 | 0.94874 | 0.95007 | +0.00247 |
+| 17 | 0.95290 | 0.95143 | 0.95219 | -0.00071 |
+| 42 | 0.95244 | 0.95026 | 0.95102 | -0.00142 |
+| 73 | 0.95208 | 0.95030 | 0.95174 | -0.00034 |
+| 123 | 0.94933 | 0.94813 | 0.94863 | -0.00070 |
+
+Adaptive fusion exceeded the model-only F1 on **one of five** random splits and trailed on four. This reinforces that the improvement is **not reliably demonstrated** here, but the five evaluations reuse one source dataset and are correlated; do not interpret these as independent external replications or a formal statistical significance test.
+
 ## How to reproduce
 ```bash
 python -m pip install numpy pandas scikit-learn joblib
