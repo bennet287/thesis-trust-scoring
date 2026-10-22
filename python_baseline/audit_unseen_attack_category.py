@@ -42,6 +42,12 @@ def challenge_indices(categories, labels, category, seed):
     return fit, known_validation, withheld
 
 
+def ambiguous_prediction_band(attack_probability):
+    """Illustrative probability-margin heuristic, NOT calibrated uncertainty."""
+    p = np.asarray(attack_probability)
+    return (p >= 0.2) & (p <= 0.8)
+
+
 def evaluate_category(X, y, categories, category, seed):
     fit, known_val, withheld = challenge_indices(categories, y, category, seed)
     model = Pipeline([
@@ -56,6 +62,9 @@ def evaluate_category(X, y, categories, category, seed):
     known_risk = model.predict_proba(X.iloc[known_val])[:, 1]
     unseen_risk = model.predict_proba(X.iloc[withheld])[:, 1]
     known_predictions = known_risk >= 0.5
+    missed = unseen_risk < 0.5
+    ambiguous = ambiguous_prediction_band(unseen_risk)
+    normal_valid = y[known_val] == 0
     return {
         "category": category,
         "seed": int(seed),
@@ -68,6 +77,8 @@ def evaluate_category(X, y, categories, category, seed):
         "withheld_missed_count": int(np.count_nonzero(unseen_risk < 0.5)),
         "withheld_predicted_attack_probability_le_0_1": float(np.mean(unseen_risk <= 0.1)),
         "withheld_probability_median": float(np.median(unseen_risk)),
+        "missed_attacks_flagged_by_naive_ambiguity_band_fraction": float(np.mean(ambiguous[missed])) if np.any(missed) else None,
+        "known_normal_flagged_by_naive_ambiguity_band_fraction": float(np.mean(ambiguous_prediction_band(known_risk)[normal_valid])),
     }
 
 
