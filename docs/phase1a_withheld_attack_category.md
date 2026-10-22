@@ -17,7 +17,7 @@ python -m pip install numpy pandas scikit-learn
 python -m unittest discover -s tests -v
 python python_baseline/audit_unseen_attack_category.py --output results/audit/phase1a_categories.json
 ```
-The CLI's defaults check DoS, Reconnaissance, Fuzzers, Exploits, and Generic under seeds 7, 17, 42, 73, 123.
+The CLI's defaults check DoS, Reconnaissance, Fuzzers, Exploits, and Generic under seeds 7, 17, 42, 73, 123. The diagnostic 0.2–0.8 probability-margin metric is additionally recorded for missed attacks.
 
 ## One-split observations, seed 42
 | Withheld attack category | Withheld records | Attack recall | Missed | Attack probability <= 0.1 |
@@ -40,6 +40,11 @@ Only the exact Fuzzers missed count is independently calculated and recorded her
 | 123 | 47.13% | 40.93% |
 
 This held-category exercise reveals a failure case worth studying: the classifier misses many withheld Fuzzers cases and sometimes assigns very low attack likelihood to them.
+
+## Preliminary test of a simple uncertainty heuristic (seed 42)
+For Fuzzers, applying a **naive probability-margin** alert when predicted attack probability is between **0.2 and 0.8** flagged only **17.28% of the 3,125 missed Fuzzers attacks**. It also flagged **6.00% of normal flows** in the known-condition validation partition.
+
+This is **not** a calibrated uncertainty estimator. These illustrative thresholds were selected for a diagnostic, not optimized or pre-registered. The result is valuable mainly as a warning: a simple confidence-margin or entropy-style heuristic can miss confidently incorrect predictions, so the thesis must not assume that uncertainty-aware fallback automatically resolves the security problem.
 
 ## Interpretation constraints
 - Holding out a known attack category creates a synthetic *novel-category* evaluation challenge, not genuine deployment distribution shift.
