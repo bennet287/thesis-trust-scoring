@@ -10,7 +10,7 @@ import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = PROJECT_ROOT / "results" / "models" / "numeric_dt_pipeline.joblib"
-TEST_FILE = PROJECT_ROOT / "data" / "raw" / "UNSW_NB15_testing-set.csv"
+TRAIN_FILE = PROJECT_ROOT / "data" / "raw" / "UNSW_NB15_training-set.csv"
 OUT_FILE = PROJECT_ROOT / "results" / "models" / "retrieval_kb.json"
 
 
@@ -21,10 +21,18 @@ def detect_target_column(df: pd.DataFrame) -> str:
     raise ValueError("Could not detect target column.")
 
 
+def verify_profile_source(source_file: Path) -> None:
+    """Prevent retrieval profiles from being built using non-training splits."""
+    if source_file.resolve() != TRAIN_FILE.resolve():
+        raise ValueError("Retrieval profiles must use the designated training split only")
+
+
 def main() -> None:
+    verify_profile_source(TRAIN_FILE)
     pipeline = joblib.load(MODEL_PATH)
 
-    df = pd.read_csv(TEST_FILE)
+    # Retrieval profiles are built only from training/development data.
+    df = pd.read_csv(TRAIN_FILE)
     target_col = detect_target_column(df)
 
     drop_candidates = ["id", "attack_cat", target_col]
@@ -83,6 +91,11 @@ def main() -> None:
         )
 
     kb = {
+        "data_provenance": {
+            "split": "training",
+            "source_file": TRAIN_FILE.name,
+            "n_source_rows": int(len(df)),
+        },
         "feature_names": X.columns.tolist(),
         "scaler_min": scaler.data_min_.tolist(),
         "scaler_max": scaler.data_max_.tolist(),
