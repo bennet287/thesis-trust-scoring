@@ -235,6 +235,21 @@ def model_trust(pipeline, x: np.ndarray):
     return attack_prob, M
 
 
+def transform_retrieval_features(x: np.ndarray, pipeline) -> np.ndarray:
+    """Apply the fitted numeric preprocessor used to create retrieval centroids.
+
+    Input features are raw, while retrieval_kb.json stores centroids in the
+    imputed + MinMax-scaled space. Both sides must use the same representation.
+    """
+    steps = pipeline.named_steps
+    if "imputer" not in steps or "scaler" not in steps:
+        raise ValueError("Retrieval requires a numeric pipeline with imputer and scaler steps")
+    model_input = _as_model_input(pipeline, np.asarray(x, dtype=np.float64))
+    imputed = steps["imputer"].transform(model_input)
+    transformed = steps["scaler"].transform(imputed)
+    return np.asarray(transformed, dtype=np.float64).reshape(-1)
+
+
 # -----------------------------
 # Sequence loading
 # -----------------------------
@@ -333,7 +348,8 @@ def ltca_pipeline(
 ):
     attack_prob, M = model_trust(pipeline, x)
 
-    rinfo = retrieval_with_override(x, profiles, retrieval_override)
+    retrieval_x = transform_retrieval_features(x, pipeline)
+    rinfo = retrieval_with_override(retrieval_x, profiles, retrieval_override)
     R = rinfo["R"]
 
     H = history_buffer.compute()
