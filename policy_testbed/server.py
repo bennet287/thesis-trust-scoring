@@ -2,7 +2,8 @@
 
 Unlike a classifier returning ALLOW/BLOCK labels, this server truly prevents
 HTTP reads and writes unless a verified token's principal has permission.
-It binds to loopback; no AI risk scores are used or trusted at this stage.
+It binds to loopback. Optional experimental risk evidence is server-side only;
+HTTP clients cannot submit risk values, and no live ML model is attached yet.
 """
 from __future__ import annotations
 
@@ -14,7 +15,9 @@ import secrets
 import threading
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Mapping
+from typing import Callable, Mapping
+
+from policy_testbed.risk_policy import POLICY_ONLY, RISK_GATED, decide, validate_configuration
 from urllib.parse import urlsplit
 
 READ = ("GET", "/v1/telemetry")
@@ -59,6 +62,15 @@ class TestbedState:
     sampling_interval: int = 30
     audit: list[dict] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
+    risk_mode: str = POLICY_ONLY
+    # This callable must receive server-side evidence, never client HTTP headers.
+    risk_provider: Callable[[str, str, str], float] | None = None
+    risk_threshold: float = 0.70
+
+    def __post_init__(self) -> None:
+        validate_configuration(self.risk_mode, self.risk_threshold)
+        if self.risk_mode == RISK_GATED and self.risk_provider is None:
+            raise ValueError("Risk-gated mode requires a server-controlled evidence provider")
 
     def authorized(self, principal: str, method: str, path: str) -> bool:
         return (method, path) in PERMISSIONS.get(principal, frozenset())
@@ -93,10 +105,25 @@ def make_server(state: TestbedState, port: int = 0) -> ThreadingHTTPServer:
                 state.record(principal=None, method=method, path=path, decision="unauthenticated")
                 self.json_response(401, {"error": "authentication_required"})
                 return None
+            # Explicit permission first: low risk cannot grant a forbidden operation.
             if not state.authorized(principal, method, path):
                 state.record(principal=principal, method=method, path=path, decision="denied_by_policy")
                 self.json_response(403, {"error": "permission_denied"})
                 return None
+            if state.risk_mode == RISK_GATED:
+                # Risk is injected server-side. Never trust X-Risk or other client input.
+                try:
+                    risk_score = state.risk_provider(principal, method, path)
+                except Exception:
+                    risk_score = None
+                risk_decision = decide(True, mode=RISK_GATED, risk_score=risk_score,
+                                       threshold=state.risk_threshold)
+                if risk_decision != "allowed":
+                    state.record(principal=principal, method=method, path=path,
+                                 decision=risk_decision)
+                    code = 503 if risk_decision == "unavailable_risk" else 403
+                    self.json_response(code, {"error": risk_decision})
+                    return None
             return principal
 
         def route(self, method: str) -> None:
@@ -159,7 +186,7 @@ def main() -> None:
     except (ValueError, TypeError) as error:
         parser.error(f"invalid token configuration: {error}")
     with make_server(state, args.port) as server:
-        print(f"Local authorization testbed listening on http://127.0.0.1:{server.server_port}; no ML risk checks enabled")
+        print(f"Local authorization testbed listening on http://127.0.0.1:{server.server_port}; policy-only mode (no ML risk model attached)")
         server.serve_forever()
 
 
